@@ -580,47 +580,90 @@ function isDatePage(title) {
   );
 }
 
-// Filtre auteurs + œuvres : batch query des catégories
+// Filtre auteurs + œuvres via Wikidata (P31 = instance of)
+// Étape 1 : récupère les QID Wikidata via Wikipedia
+// Étape 2 : interroge Wikidata pour vérifier le type sémantique
 async function filterByPersonsAndWorks(titles) {
-  const PERSON_KW = ['naissance en','décès en','né en','mort en','acteur','actrice',
-    'réalisateur','réalisatrice','auteur','auteure','écrivain','écrivaine','musicien',
-    'musicienne','chanteur','chanteuse','compositeur','compositrice','cinéaste',
-    'scénariste','romancier','poète','poétesse','artiste','photographe','philosophe',
-    'historien','journaliste','dramaturge','metteur en scène','producteur','productrice',
-    'illustrateur','mangaka','dessinateur','bande dessinée'];
-  const WORK_KW = ['film','série télévisée','série d\'animation','anime','manga',
-    'roman','album','jeu vidéo','bande dessinée','comics','pièce de théâtre',
-    'œuvre','long métrage','court métrage','documentaire','comédie musicale',
-    'album studio','album de','single','chanson','musique de film','bande originale',
-    'jeu de rôle','jeu de société'];
+  const HUMAN_Q = new Set(['Q5']); // humain
 
-  const result = new Set();
+  const WORK_Q = new Set([
+    'Q11424',    // film
+    'Q7725634',  // œuvre littéraire
+    'Q571',      // livre
+    'Q8261',     // roman
+    'Q1002697',  // nouvelle
+    'Q482994',   // album musical
+    'Q134556',   // single
+    'Q208569',   // EP
+    'Q7889',     // jeu vidéo
+    'Q5398426',  // série télévisée
+    'Q37960',    // anime
+    'Q1107',     // manga
+    'Q93184',    // bande dessinée
+    'Q25379',    // pièce de théâtre
+    'Q24856',    // franchise de médias
+    'Q17537576', // œuvre de création (générique)
+    'Q47461344', // œuvre écrite (générique)
+    'Q1261214',  // saga
+    'Q2431196',  // œuvre audiovisuelle
+  ]);
+
+  // ── Étape 1 : QID par batch de 50 ─────────────────────────
+  const qidByTitle = {};
 
   for (let i = 0; i < titles.length; i += 50) {
     const chunk = titles.slice(i, i + 50);
     const p = new URLSearchParams({
-      action: 'query',
-      titles: chunk.join('|'),
-      prop: 'categories',
-      cllimit: '30',
-      clshow: '!hidden',
-      format: 'json',
-      origin: '*'
+      action: 'query', titles: chunk.join('|'),
+      prop: 'pageprops', ppprop: 'wikibase_item',
+      format: 'json', origin: '*'
     });
     try {
       const r = await fetch(`${WIKI}?${p}`);
       const d = await r.json();
       for (const page of Object.values(d.query.pages)) {
         if (page.missing) continue;
-        const cats = (page.categories || []).map(c => c.title.toLowerCase());
-        const isPerson = cats.some(c => PERSON_KW.some(k => c.includes(k)));
-        const isWork   = cats.some(c => WORK_KW.some(k => c.includes(k)));
-        if (isPerson || isWork) result.add(page.title);
+        const qid = page.pageprops?.wikibase_item;
+        if (qid) qidByTitle[page.title] = qid;
       }
-    } catch(e) { /* silent, skip chunk */ }
+    } catch(e) {}
   }
 
-  return titles.filter(t => result.has(t));
+  const allQids = Object.values(qidByTitle);
+  if (!allQids.length) return [];
+
+  // Inverse map QID → title
+  const titleByQid = {};
+  for (const [t, q] of Object.entries(qidByTitle)) titleByQid[q] = t;
+
+  // ── Étape 2 : P31 (instance of) via Wikidata par batch de 50 ──
+  const kept = new Set();
+
+  for (let i = 0; i < allQids.length; i += 50) {
+    const chunk = allQids.slice(i, i + 50);
+    const p = new URLSearchParams({
+      action: 'wbgetentities', ids: chunk.join('|'),
+      props: 'claims', format: 'json', origin: '*'
+    });
+    try {
+      const r = await fetch(`https://www.wikidata.org/w/api.php?${p}`);
+      const d = await r.json();
+      for (const [qid, entity] of Object.entries(d.entities || {})) {
+        if (entity.missing) continue;
+        const p31 = entity.claims?.P31 || [];
+        for (const claim of p31) {
+          const val = claim.mainsnak?.datavalue?.value?.id;
+          if (HUMAN_Q.has(val) || WORK_Q.has(val)) {
+            const title = titleByQid[qid];
+            if (title) kept.add(title);
+            break;
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  return titles.filter(t => kept.has(t));
 }
 
 async function wikiExtract(title) {
