@@ -356,17 +356,13 @@
       text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
     }
 
-    /* Continue hint */
+    /* Skip hint (auto-play mode) */
     #hint {
-      text-align: center; font-size: 18px; line-height: 1;
-      color: rgba(255,255,255,0.18);
-      padding: 16px 0;
+      text-align: right;
+      font-size: 13px; letter-spacing: 1px;
+      color: rgba(255,255,255,0.1);
+      padding: 18px 2px 0 0;
       cursor: pointer; user-select: none;
-      animation: float-hint 2.5s ease-in-out infinite;
-    }
-    @keyframes float-hint {
-      0%, 100% { transform: translateY(0); opacity: 0.18; }
-      50%       { transform: translateY(4px); opacity: 0.42; }
     }
   </style>
 </head>
@@ -459,17 +455,29 @@
 
   // ── Engine ───────────────────────────────────────────────────
   let step = 0;
+  let gen  = 0;        // incremented on skip/reset to abort in-flight renders
+  let autoTimer = null;
+  let beatStarted = false; // true once current beat's DOM node is appended
+
   const $dialogue = document.getElementById('dialogue');
   const $choices  = document.getElementById('choices');
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function tick()    { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
 
-  async function typeText(el, text, speed = 28) {
+  // Pause proportional to text length, between 1.4s and 3s
+  function readPause(text) { return Math.max(1400, Math.min(text.length * 35, 3000)); }
+
+  async function typeText(el, text, myGen, speed = 28) {
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
     el.appendChild(cursor);
     for (let i = 0; i < text.length; i++) {
+      if (gen !== myGen) {
+        cursor.insertAdjacentText('beforebegin', text.slice(i)); // dump rest instantly
+        cursor.remove();
+        return;
+      }
       cursor.insertAdjacentText('beforebegin', text[i]);
       await sleep(speed + Math.random() * 18);
     }
@@ -478,35 +486,98 @@
 
   async function renderBeat(beat) {
     $choices.innerHTML = '';
+    beatStarted = false;
+    const myGen = gen;
+
     if (beat.type === 'choice') { showChoices(beat.options); return; }
 
     $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
 
-    let msgEl;
-    if (beat.type === 'narrator') {
-      msgEl = document.createElement('div');
-      msgEl.className = 'msg msg-narrator';
-      $dialogue.appendChild(msgEl);
-      await tick(); msgEl.classList.add('in');
-      await sleep(180);
-      await typeText(msgEl, beat.text, 26);
+    let msgEl, textEl;
 
-    } else if (beat.type === 'lia') {
+    if (beat.type === 'narrator') {
+      msgEl = textEl = document.createElement('div');
+      msgEl.className = 'msg msg-narrator';
+    } else {
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-lia';
       const label  = document.createElement('div');
       label.className = 'lia-label'; label.textContent = 'LIA';
-      const bubble = document.createElement('div');
-      bubble.className = 'lia-bubble';
-      msgEl.appendChild(label); msgEl.appendChild(bubble);
-      $dialogue.appendChild(msgEl);
-      await tick(); msgEl.classList.add('in');
-      await sleep(200);
-      await typeText(bubble, beat.text, 28);
+      textEl = document.createElement('div');
+      textEl.className = 'lia-bubble';
+      msgEl.appendChild(label); msgEl.appendChild(textEl);
     }
 
+    await tick();
+    if (gen !== myGen) return;
+
+    $dialogue.appendChild(msgEl);
+    beatStarted = true;
+    msgEl.classList.add('in');
+    await sleep(beat.type === 'lia' ? 200 : 180);
+    if (gen !== myGen) return;
+
+    await typeText(textEl, beat.text, myGen, beat.type === 'lia' ? 28 : 26);
+    if (gen !== myGen) return;
+
     $dialogue.scrollTo({ top: $dialogue.scrollHeight, behavior: 'smooth' });
-    showHint();
+    showSkipHint();
+
+    // Auto-advance after a read pause
+    autoTimer = setTimeout(() => {
+      if (gen !== myGen) return;
+      $choices.innerHTML = '';
+      step++;
+      runStep();
+    }, readPause(beat.text));
+  }
+
+  // Subtle tap-to-skip zone (barely visible »)
+  function showSkipHint() {
+    $choices.innerHTML = '';
+    const hint = document.createElement('div');
+    hint.id = 'hint';
+    hint.textContent = '»';
+    hint.addEventListener('click', skipToChoice);
+    $choices.appendChild(hint);
+  }
+
+  // Skip all remaining non-choice beats, jump to next choice
+  function skipToChoice() {
+    gen++;
+    clearTimeout(autoTimer);
+    $choices.innerHTML = '';
+
+    // If the current beat was never appended, re-render it instantly
+    let s = beatStarted ? step + 1 : step;
+
+    while (s < STORY.length && STORY[s].type !== 'choice') {
+      renderInstant(STORY[s]);
+      s++;
+    }
+    step = s;
+    if (step < STORY.length) runStep();
+  }
+
+  // Render a non-choice beat synchronously (no animation)
+  function renderInstant(beat) {
+    $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
+    let msgEl;
+    if (beat.type === 'narrator') {
+      msgEl = document.createElement('div');
+      msgEl.className = 'msg msg-narrator in';
+      msgEl.textContent = beat.text;
+    } else {
+      msgEl = document.createElement('div');
+      msgEl.className = 'msg msg-lia in';
+      const label = document.createElement('div');
+      label.className = 'lia-label'; label.textContent = 'LIA';
+      const bubble = document.createElement('div');
+      bubble.className = 'lia-bubble'; bubble.textContent = beat.text;
+      msgEl.appendChild(label); msgEl.appendChild(bubble);
+    }
+    $dialogue.appendChild(msgEl);
+    $dialogue.scrollTo({ top: $dialogue.scrollHeight, behavior: 'smooth' });
   }
 
   function showChoices(options) {
@@ -524,20 +595,14 @@
     });
   }
 
-  function showHint() {
-    $choices.innerHTML = '';
-    const hint = document.createElement('div');
-    hint.id = 'hint'; hint.textContent = '▾';
-    hint.addEventListener('click', () => { step++; runStep(); });
-    $choices.appendChild(hint);
-  }
-
   function runStep() {
     if (step >= STORY.length) return;
     renderBeat(STORY[step]);
   }
 
   function resetGame() {
+    gen++;
+    clearTimeout(autoTimer);
     step = 0;
     $dialogue.innerHTML = '';
     $choices.innerHTML = '';
