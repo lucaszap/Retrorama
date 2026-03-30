@@ -164,7 +164,12 @@
     container.addEventListener('mouseleave', () => targetIntensity = 0);
 
     container.addEventListener('touchstart', (e) => { e.preventDefault(); targetIntensity = 1; });
-    container.addEventListener('touchend', () => targetIntensity = 0);
+    container.addEventListener('touchend', (e) => {
+      targetIntensity = 0;
+      document.body.style.transition = 'opacity 0.5s ease';
+      document.body.style.opacity = '0';
+      setTimeout(() => { window.location.href = '../Projet/retrorama.html'; }, 500);
+    });
 
     window.addEventListener('load', () => {
       resizeCanvas();
