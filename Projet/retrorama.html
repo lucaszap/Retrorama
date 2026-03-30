@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Retrorama</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="manifest" href="/manifest.json">
@@ -35,8 +37,15 @@
       --downstream:#6aa8d4;
     }
 
+    :root {
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--white); font-family:'Barlow',sans-serif; font-weight:300; }
+    html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--white); font-family:'Barlow',sans-serif; font-weight:300; -webkit-tap-highlight-color:transparent; touch-action:manipulation; -webkit-text-size-adjust:100%; }
 
     /* grain pellicule */
     body::before {
@@ -46,10 +55,12 @@
 
     /* ── HEADER ───────────────────────────────── */
     #header {
-      position:fixed; top:0; left:0; right:0; height:52px;
+      position:fixed; top:0; left:0; right:0;
+      height:calc(52px + var(--safe-top));
+      padding-top:var(--safe-top);
       background:var(--bg); border-bottom:1px solid var(--border);
       display:grid; grid-template-columns:auto 1fr auto;
-      align-items:center; padding:0 20px 0 0; z-index:100;
+      align-items:center; padding-right:20px; z-index:100;
     }
     #logo-block {
       position: relative;
@@ -84,7 +95,8 @@
     #search {
       width:100%; background:transparent; border:none; border-bottom:1px solid var(--border);
       color:var(--white); font-family:'Barlow Condensed',sans-serif; font-weight:400;
-      font-size:14px; letter-spacing:1px; padding:6px 28px 6px 0; outline:none; transition:border-color .2s;
+      font-size:16px; letter-spacing:1px; padding:6px 28px 6px 0; outline:none; transition:border-color .2s;
+      -webkit-appearance:none;
     }
     #search:focus { border-bottom-color:var(--red); }
     #search::placeholder { color:var(--grey-dark); font-style:italic; font-weight:300; }
@@ -132,8 +144,8 @@
 
     /* ── SVG ── */
     #graph-svg {
-      position:fixed; top:52px; left:0;
-      width:100vw; height:calc(100vh - 52px - 28px);
+      position:fixed; top:calc(52px + var(--safe-top)); left:0;
+      width:100vw; height:calc(100vh - 52px - var(--safe-top) - 28px - var(--safe-bottom));
       background:radial-gradient(ellipse at 50% 40%, #0f0f40 0%, #0a0a2a 70%);
     }
 
@@ -178,9 +190,11 @@
 
     /* ── STATUS BAR ── */
     #statusbar {
-      position:fixed; bottom:0; left:0; right:0; height:28px;
+      position:fixed; bottom:0; left:0; right:0;
+      height:calc(28px + var(--safe-bottom));
+      padding-bottom:var(--safe-bottom);
       background:var(--bg); border-top:1px solid var(--border);
-      display:flex; align-items:center; padding:0 16px; gap:16px; z-index:100;
+      display:flex; align-items:center; padding-left:16px; padding-right:16px; gap:16px; z-index:100;
     }
     .sb-item { font-family:'Barlow Condensed',sans-serif; font-size:10px; letter-spacing:1.5px; color:var(--grey); text-transform:uppercase; white-space:nowrap; }
     #status-msg { color:var(--gold); }
@@ -210,7 +224,7 @@
 
     /* ── INFO PANEL ──────────────────────────────── */
     #info-panel {
-      position:fixed; bottom:28px; left:0; right:0; z-index:150;
+      position:fixed; bottom:calc(28px + var(--safe-bottom)); left:0; right:0; z-index:150;
       background:var(--surface); border-top:2px solid var(--red);
       max-height:0; overflow:hidden;
       transition:max-height .3s cubic-bezier(.4,0,.2,1);

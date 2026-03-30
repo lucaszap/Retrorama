@@ -2,183 +2,350 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a2a">
   <title>Retro Rama</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      background: #0a0a2a;
-      overflow: hidden;
+    :root {
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
     }
 
-    .logo-container {
-      position: absolute;
-      top: 40px;
-      left: 40px;
-      width: 280px;
-      height: 280px;
-      cursor: pointer;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #0a0a2a;
+      overflow: hidden;
+      font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Grain film */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 999; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    /* Background star canvas */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Menu layout */
+    #menu {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px);
       z-index: 10;
     }
 
-    .retro-logo {
+    /* App cards */
+    .app-card {
       width: 100%;
-      height: 100%;
-      object-fit: contain;
+      max-width: 340px;
+      background: rgba(255,255,255,0.04);
+      border: 0.5px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 28px 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
     }
 
-    #stars-canvas {
+    .app-card::after {
+      content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .app-card:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .app-card.retro-card::after { background: radial-gradient(circle at 30% 50%, rgba(212,41,26,0.12), transparent 70%); }
+    .app-card.wiki-card::after  { background: radial-gradient(circle at 30% 50%, rgba(74,158,255,0.12), transparent 70%); }
+    .app-card:active::after { opacity: 1; }
+
+    /* Icon wrapper */
+    .app-icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-card .app-icon-wrap {
+      background: linear-gradient(145deg, #1a0a08, #2d0f0a);
+      border: 0.5px solid rgba(212,41,26,0.25);
+    }
+
+    .wiki-card .app-icon-wrap {
+      background: linear-gradient(145deg, #080a1a, #0a1030);
+      border: 0.5px solid rgba(74,158,255,0.2);
+    }
+
+    .app-icon-img {
+      width: 46px; height: 46px;
+      object-fit: contain;
+      position: relative; z-index: 2;
+    }
+
+    #icon-stars {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
       pointer-events: none;
-      z-index: 5;
+    }
+
+    .wiki-icon-letter {
+      font-size: 36px;
+      font-weight: 700;
+      color: #4a9eff;
+      font-family: Georgia, 'Times New Roman', serif;
+      position: relative; z-index: 2;
+      line-height: 1;
+    }
+
+    /* Text info */
+    .app-info { flex: 1; min-width: 0; }
+
+    .app-name {
+      font-size: 19px;
+      font-weight: 700;
+      color: #f5f5f7;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+
+    .retro-card .app-name { color: #f0ece4; }
+    .wiki-card .app-name  { color: #f5f5f7; }
+
+    .app-desc {
+      font-size: 13px;
+      color: rgba(255,255,255,0.38);
+      line-height: 1.4;
+    }
+
+    .app-arrow {
+      font-size: 18px;
+      color: rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+
+    /* Title */
+    #site-title {
+      position: absolute;
+      top: calc(var(--safe-top) + 32px);
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.12);
+      font-weight: 400;
+      pointer-events: none;
+      z-index: 10;
     }
   </style>
 </head>
 
 <body>
-  <div class="logo-container" id="logo-container">
-    <img src="retro-rama-logo.png" alt="RETRO RAMA" class="retro-logo">
-    <canvas id="stars-canvas"></canvas>
+  <canvas id="bg-canvas"></canvas>
+  <div id="site-title">Retro Rama</div>
+
+  <div id="menu">
+    <!-- RETRORAMA -->
+    <div class="app-card retro-card" id="card-retro">
+      <div class="app-icon-wrap">
+        <canvas id="icon-stars"></canvas>
+        <img class="app-icon-img" src="retro-rama-logo.png" alt="Retrorama">
+      </div>
+      <div class="app-info">
+        <div class="app-name">Retrorama</div>
+        <div class="app-desc">Cartographie des influences culturelles</div>
+      </div>
+      <div class="app-arrow">›</div>
+    </div>
+
+    <!-- WIKILINKS -->
+    <div class="app-card wiki-card" id="card-wiki">
+      <div class="app-icon-wrap">
+        <div class="wiki-icon-letter">W</div>
+      </div>
+      <div class="app-info">
+        <div class="app-name">Wikilinks</div>
+        <div class="app-desc">Explorer les connexions Wikipédia</div>
+      </div>
+      <div class="app-arrow">›</div>
+    </div>
   </div>
 
   <script>
-    // Fondu de sortie vers retrorama.html au clic
-    document.getElementById('logo-container').addEventListener('click', function() {
-      document.body.style.transition = 'opacity 0.5s ease';
+    // ── Navigation ─────────────────────────────────────────────
+    function navigateTo(url) {
+      document.body.style.transition = 'opacity 0.35s ease';
       document.body.style.opacity = '0';
-      setTimeout(() => { window.location.href = '../Projet/retrorama.html'; }, 500);
-    });
-  </script>
-  <script>
-    const canvas = document.getElementById('stars-canvas');
-    const ctx = canvas.getContext('2d');
-    const container = document.querySelector('.logo-container');
-
-    let width, height, centerX, centerY;
-    let stars = [];
-    let intensity = 0;
-    let targetIntensity = 0;
-
-    function resizeCanvas() {
-      width = container.offsetWidth;
-      height = container.offsetHeight;
-      canvas.width = width;
-      canvas.height = height;
-      centerX = width / 2;
-      centerY = height / 2;
+      setTimeout(() => { window.location.href = url; }, 350);
     }
 
-    class Star {
-      constructor() {
-        this.reset();
+    function bindCard(id, url) {
+      const el = document.getElementById(id);
+      el.addEventListener('click', () => navigateTo(url));
+      el.addEventListener('touchend', e => {
+        e.preventDefault();
+        navigateTo(url);
+      });
+    }
+
+    bindCard('card-retro', '../Projet/retrorama.html');
+    bindCard('card-wiki',  '../Wikilinks/wikilinks.html');
+
+    // ── Background parallax stars ──────────────────────────────
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+      let W, H, stars = [];
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
       }
 
-      reset() {
-        this.angle = Math.random() * Math.PI * 2;
-        // Distance de départ très variée pour éviter l'effet "bloc"
-        this.dist = Math.random() * 120 + 8;        // entre très proche et assez loin
-        this.speed = Math.random() * 1.2 + 0.5;     // vitesse légèrement différente pour chaque étoile
-        this.length = Math.random() * 28 + 14;
-        this.brightness = Math.random() * 0.45 + 0.78;
-        this.opacity = Math.random() * 0.4 + 0.3;   // opacité de base variable
+      class BgStar {
+        constructor() { this.reset(); }
+        reset() {
+          this.x = Math.random() * W;
+          this.y = Math.random() * H;
+          this.r = Math.random() * 1.2 + 0.2;
+          this.a = Math.random() * 0.5 + 0.1;
+          this.speed = Math.random() * 0.003 + 0.001;
+          this.phase = Math.random() * Math.PI * 2;
+        }
+        draw(t) {
+          const alpha = this.a * (0.6 + 0.4 * Math.sin(t * this.speed * 1000 + this.phase));
+          ctx.fillStyle = `rgba(255,245,230,${alpha})`;
+          ctx.fillRect(this.x - this.r/2, this.y - this.r/2, this.r, this.r);
+        }
       }
 
-      update() {
-        if (intensity > 0.06) {
-          this.dist += this.speed * intensity; // Optionnel : multiplier par l'intensité pour plus de fluidité
-          this.speed = Math.min(this.speed * 1.026, 19.5);
-          
-          if (this.dist > Math.max(width, height) * 1.65) {
-            this.reset();
-          }
-        } else {
+      function init() {
+        resize();
+        stars = Array.from({length: 160}, () => new BgStar());
+      }
+
+      function animate(t) {
+        ctx.clearRect(0, 0, W, H);
+        for (const s of stars) s.draw(t);
+        requestAnimationFrame(animate);
+      }
+
+      window.addEventListener('load', () => { init(); requestAnimationFrame(animate); });
+      window.addEventListener('resize', resize);
+    })();
+
+    // ── Icon star animation (hover effect on retro card) ────────
+    (function() {
+      const canvas = document.getElementById('icon-stars');
+      const ctx = canvas.getContext('2d');
+      const wrap = canvas.parentElement;
+
+      let W, H, stars = [], intensity = 0, target = 0;
+
+      function resize() {
+        W = canvas.width  = wrap.offsetWidth;
+        H = canvas.height = wrap.offsetHeight;
+      }
+
+      class Star {
+        constructor() { this.reset(); }
+        reset() {
+          this.angle = Math.random() * Math.PI * 2;
+          this.dist  = Math.random() * 30 + 4;
           this.speed = Math.random() * 1.2 + 0.5;
+          this.len   = Math.random() * 14 + 7;
+          this.bri   = Math.random() * 0.45 + 0.78;
+          this.opa   = Math.random() * 0.4 + 0.3;
+        }
+        update() {
+          if (intensity > 0.06) {
+            this.dist += this.speed * intensity;
+            this.speed = Math.min(this.speed * 1.026, 12);
+            if (this.dist > Math.max(W, H) * 1.6) this.reset();
+          } else {
+            this.speed = Math.random() * 1.2 + 0.5;
+          }
+        }
+        draw() {
+          const i = intensity;
+          const cx = W/2, cy = H/2;
+          const x  = cx + Math.cos(this.angle) * this.dist;
+          const y  = cy + Math.sin(this.angle) * this.dist;
+          if (i < 0.12) {
+            ctx.fillStyle = `rgba(255,245,230,${this.bri + Math.sin(Date.now()/350+this.angle)*0.17})`;
+            ctx.fillRect(x-1, y-1, 2, 2);
+          } else {
+            const pd = Math.max(0, this.dist - this.len * i);
+            const px = cx + Math.cos(this.angle) * pd;
+            const py = cy + Math.sin(this.angle) * pd;
+            let a = this.bri * Math.max(0.3, 1 - this.dist/(Math.max(W,H)*0.75)) * this.opa;
+            ctx.strokeStyle = `rgba(255,245,215,${a})`;
+            ctx.lineWidth = 1.5 + i;
+            ctx.lineCap = 'round';
+            ctx.shadowBlur = 5 * i;
+            ctx.shadowColor = '#ffe89f';
+            ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y); ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
         }
       }
 
-      draw() {
-        const i = intensity;
-        const x = centerX + Math.cos(this.angle) * this.dist;
-        const y = centerY + Math.sin(this.angle) * this.dist;
+      function init() { resize(); stars = Array.from({length:50}, () => new Star()); }
 
-        const prevDist = Math.max(0, this.dist - this.length * i);
-        const px = centerX + Math.cos(this.angle) * prevDist;
-        const py = centerY + Math.sin(this.angle) * prevDist;
-
-        let alpha = this.brightness * Math.max(0.3, 1 - this.dist / (Math.max(width, height) * 0.75));
-        alpha *= this.opacity;
-
-        if (i < 0.12) {
-          // Mode stable : étoiles éparpillées naturellement
-          ctx.fillStyle = `rgba(255, 245, 230, ${this.brightness + Math.sin(Date.now()/350 + this.angle) * 0.17})`;
-          ctx.fillRect(x - 1.35, y - 1.35, 2.7, 2.7);
-        } else {
-          // Mode hyperespace : traits
-          ctx.strokeStyle = `rgba(255, 245, 215, ${alpha})`;
-          ctx.lineWidth = 2.2 + i * 1.7;
-          ctx.lineCap = "round";
-          ctx.shadowBlur = 7 * i;
-          ctx.shadowColor = "#ffe89f";
-
-          ctx.beginPath();
-          ctx.moveTo(px, py);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-        }
+      function animate() {
+        ctx.clearRect(0, 0, W, H);
+        intensity += (target - intensity) * 0.02;
+        for (const s of stars) { s.update(); s.draw(); }
+        requestAnimationFrame(animate);
       }
-    }
 
-    function initStars() {
-      stars = [];
-      // Moins d'étoiles pour un espace plus "vide" et naturel
-      for (let i = 0; i < 110; i++) {
-        stars.push(new Star());
-      }
-    }
+      const card = document.getElementById('card-retro');
+      card.addEventListener('mouseenter', () => target = 1);
+      card.addEventListener('mouseleave', () => target = 0);
+      card.addEventListener('touchstart', () => target = 1, {passive:true});
+      card.addEventListener('touchend',   () => { target = 0; });
 
-    function draw() {
-      ctx.clearRect(0, 0, width, height);
-
-      // Le calcul se fait ici, une seule fois par rafraîchissement d'écran
-      intensity += (targetIntensity - intensity) * 0.015; 
-
-      for (let star of stars) {
-        star.update();
-        star.draw();
-      }
-    }
-
-    function animate() {
-      draw();
-      requestAnimationFrame(animate);
-    }
-
-    container.addEventListener('mouseenter', () => targetIntensity = 1);
-    container.addEventListener('mouseleave', () => targetIntensity = 0);
-
-    container.addEventListener('touchstart', (e) => { e.preventDefault(); targetIntensity = 1; });
-    container.addEventListener('touchend', (e) => {
-      targetIntensity = 0;
-      document.body.style.transition = 'opacity 0.5s ease';
-      document.body.style.opacity = '0';
-      setTimeout(() => { window.location.href = '../Projet/retrorama.html'; }, 500);
-    });
-
-    window.addEventListener('load', () => {
-      resizeCanvas();
-      initStars();
-      animate();
-
-      window.addEventListener('resize', resizeCanvas);
-    });
+      window.addEventListener('load', () => { init(); requestAnimationFrame(animate); window.addEventListener('resize', resize); });
+    })();
   </script>
-
 </body>
 </html>

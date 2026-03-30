@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Wikilinks</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg:          #0a0a1a;
+      --surface:     rgba(16, 16, 36, 0.92);
+      --border:      rgba(255, 255, 255, 0.08);
+      --accent:      #4a9eff;
+      --accent-glow: rgba(74, 158, 255, 0.25);
+      --white:       #f5f5f7;
+      --grey:        rgba(255, 255, 255, 0.45);
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
+      --header-h:    72px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--white);
+      font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ── HEADER ── */
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding-top: calc(var(--safe-top) + 10px);
+      padding-bottom: 10px;
+      padding-left: calc(var(--safe-left) + 12px);
+      padding-right: calc(var(--safe-right) + 12px);
+      background: rgba(10, 10, 26, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 0.5px solid var(--border);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #back-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 17px;
+      font-family: inherit;
+      padding: 8px 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      white-space: nowrap;
+      min-width: 44px;
+      min-height: 44px;
+      justify-content: center;
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+    #back-btn:active { background: rgba(74,158,255,0.12); }
+
+    #search-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    #search {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.09);
+      border: none;
+      border-radius: 12px;
+      color: var(--white);
+      font-family: inherit;
+      font-size: 16px;
+      padding: 10px 38px 10px 14px;
+      outline: none;
+      -webkit-appearance: none;
+      transition: background 0.2s;
+    }
+    #search:focus { background: rgba(255, 255, 255, 0.13); }
+    #search::placeholder { color: rgba(255,255,255,0.3); }
+    #search::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+    #search-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px; height: 20px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 50%;
+      color: var(--bg);
+      font-size: 13px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      line-height: 1;
+    }
+    #search-clear.visible { display: flex; }
+
+    /* ── SUGGESTIONS ── */
+    #suggestions {
+      position: fixed;
+      left: 0; right: 0;
+      top: var(--header-h);
+      background: rgba(12, 12, 28, 0.97);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-bottom: 0.5px solid var(--border);
+      display: none;
+      z-index: 90;
+      max-height: 55vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #suggestions.open { display: block; }
+
+    .sug-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      cursor: pointer;
+      border-bottom: 0.5px solid var(--border);
+      min-height: 60px;
+      transition: background 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sug-item:last-child { border-bottom: none; }
+    .sug-item:active { background: rgba(74,158,255,0.08); }
+
+    .sug-icon {
+      width: 36px; height: 36px;
+      background: rgba(74,158,255,0.12);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      font-family: Georgia, serif;
+    }
+
+    .sug-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--white);
+      line-height: 1.3;
+    }
+
+    .sug-snippet {
+      font-size: 13px;
+      color: var(--grey);
+      margin-top: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ── SVG GRAPH ── */
+    #graph-svg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: radial-gradient(ellipse at 50% 45%, #0d0d30 0%, #0a0a1a 70%);
+      cursor: grab;
+    }
+    #graph-svg:active { cursor: grabbing; }
+
+    .wiki-link {
+      stroke: rgba(74, 158, 255, 0.18);
+      stroke-width: 1.2;
+    }
+
+    .wiki-node { cursor: pointer; }
+    .wiki-node circle {
+      transition: filter 0.2s, r 0.3s;
+    }
+    .wiki-node.hovered circle {
+      filter: drop-shadow(0 0 8px rgba(74,158,255,0.7));
+    }
+    .wiki-node.expanded circle {
+      stroke: rgba(74,158,255,0.5) !important;
+      stroke-width: 2px !important;
+    }
+    .wiki-node text {
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      fill: rgba(255,255,255,0.75);
+      pointer-events: none;
+      text-anchor: middle;
+      dominant-baseline: hanging;
+    }
+
+    /* ── LOADER ── */
+    #loader {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      z-index: 200;
+      pointer-events: none;
+    }
+    #loader.visible { display: flex; }
+
+    .loader-ring {
+      width: 40px; height: 40px;
+      border: 2.5px solid rgba(74,158,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #loader-msg {
+      font-size: 13px;
+      color: var(--grey);
+      letter-spacing: 0.2px;
+    }
+
+    /* ── EMPTY STATE ── */
+    #empty-state {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #empty-icon {
+      font-size: 72px;
+      font-family: Georgia, serif;
+      font-weight: 700;
+      color: var(--accent);
+      opacity: 0.15;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+
+    #empty-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    #empty-sub {
+      font-size: 15px;
+      color: rgba(255,255,255,0.28);
+      line-height: 1.5;
+    }
+
+    /* ── INFO PANEL (bottom sheet) ── */
+    #info-panel {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 150;
+      background: rgba(13, 13, 32, 0.97);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-top: 0.5px solid rgba(74,158,255,0.2);
+      border-radius: 22px 22px 0 0;
+      padding-bottom: calc(var(--safe-bottom) + 8px);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: transform;
+    }
+    #info-panel.open { transform: translateY(0); }
+
+    #ip-handle {
+      width: 38px; height: 4px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 2px;
+      margin: 12px auto 18px;
+    }
+
+    #ip-body {
+      padding: 0 20px 16px;
+    }
+
+    #ip-title {
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    #ip-extract {
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.65;
+      margin-bottom: 18px;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    #ip-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ip-btn {
+      flex: 1;
+      padding: 14px 10px;
+      border-radius: 14px;
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .ip-btn:active { transform: scale(0.97); opacity: 0.85; }
+
+    #ip-explore-btn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #ip-wiki-btn {
+      background: rgba(255,255,255,0.08);
+      color: var(--white);
+      border: 0.5px solid rgba(255,255,255,0.1);
+    }
+
+    /* ── STATUS BAR ── */
+    #statusbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(30px + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: rgba(10, 10, 26, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding-left: calc(var(--safe-left) + 14px);
+      padding-right: calc(var(--safe-right) + 14px);
+      gap: 8px;
+      z-index: 50;
+      font-size: 11px;
+      color: var(--grey);
+      letter-spacing: 0.1px;
+    }
+
+    #status-msg { color: rgba(74,158,255,0.8); }
+    .sb-spacer { flex: 1; }
+    .sb-dot { opacity: 0.3; }
+
+    /* ── RESET BTN ── */
+    #reset-btn {
+      position: fixed;
+      top: calc(var(--header-h) + 14px);
+      right: calc(var(--safe-right) + 14px);
+      background: rgba(255,255,255,0.06);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--grey);
+      font-size: 12px;
+      font-family: inherit;
+      padding: 7px 12px;
+      cursor: pointer;
+      z-index: 80;
+      display: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #reset-btn.visible { display: block; }
+    #reset-btn:active { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+
+<header id="header">
+  <button id="back-btn" aria-label="Retour">‹</button>
+  <div id="search-wrap">
+    <input id="search" type="search" placeholder="Rechercher sur Wikipédia…"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    <button id="search-clear" aria-label="Effacer">×</button>
+  </div>
+</header>
+
+<div id="suggestions"></div>
+
+<svg id="graph-svg"></svg>
+
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div id="loader-msg">Chargement…</div>
+</div>
+
+<div id="empty-state">
+  <div id="empty-icon">W</div>
+  <div id="empty-title">Wikilinks</div>
+  <div id="empty-sub">Explore les connexions entre<br>les pages Wikipédia</div>
+</div>
+
+<div id="info-panel">
+  <div id="ip-handle"></div>
+  <div id="ip-body">
+    <div id="ip-title"></div>
+    <div id="ip-extract">Chargement…</div>
+    <div id="ip-actions">
+      <button class="ip-btn" id="ip-explore-btn">Explorer</button>
+      <button class="ip-btn" id="ip-wiki-btn">Wikipédia ↗</button>
+    </div>
+  </div>
+</div>
+
+<button id="reset-btn">↺ Réinitialiser</button>
+
+<div id="statusbar">
+  <span id="status-msg">Prêt</span>
+  <span class="sb-spacer"></span>
+  <span id="status-nodes">0 nœuds</span>
+  <span class="sb-dot">·</span>
+  <span id="status-links">0 liens</span>
+</div>
+
+<script>
+// ── Fade in/out navigation ────────────────────────────────────
+function navigateTo(url) {
+  document.documentElement.style.transition = 'opacity 0.3s ease';
+  document.documentElement.style.opacity = '0';
+  setTimeout(() => { window.location.href = url; }, 300);
+}
+
+document.documentElement.style.opacity = '0';
+document.documentElement.style.transition = 'opacity 0.4s ease';
+window.addEventListener('load', () => {
+  requestAnimationFrame(() => { document.documentElement.style.opacity = '1'; });
+  updateHeaderHeight();
+});
+
+document.getElementById('back-btn').addEventListener('click', () => navigateTo('../Menu/index.html'));
+document.getElementById('back-btn').addEventListener('touchend', (e) => {
+  e.preventDefault();
+  navigateTo('../Menu/index.html');
+});
+
+// ── Wikipedia API ─────────────────────────────────────────────
+const WIKI = 'https://fr.wikipedia.org/w/api.php';
+
+async function wikiSearch(query) {
+  const p = new URLSearchParams({ action:'query', list:'search', srsearch:query,
+    format:'json', origin:'*', srlimit:'7', srnamespace:'0' });
+  const r = await fetch(`${WIKI}?${p}`);
+  const d = await r.json();
+  return d.query.search || [];
+}
+
+async function wikiLinks(title) {
+  const p = new URLSearchParams({ action:'query', titles:title, prop:'links',
+    pllimit:'500', plnamespace:'0', format:'json', origin:'*' });
+  const r = await fetch(`${WIKI}?${p}`);
+  const d = await r.json();
+  const page = Object.values(d.query.pages)[0];
+  if (!page.links) return [];
+  // Filter out meta pages (Catégorie:, Portail:, etc.)
+  return page.links
+    .map(l => l.title)
+    .filter(t => !t.includes(':'));
+}
+
+async function wikiExtract(title) {
+  const p = new URLSearchParams({ action:'query', titles:title, prop:'extracts',
+    exintro:'true', exsentences:'4', explaintext:'true', format:'json', origin:'*' });
+  const r = await fetch(`${WIKI}?${p}`);
+  const d = await r.json();
+  const page = Object.values(d.query.pages)[0];
+  return (page.extract || '').replace(/\s+/g, ' ').trim();
+}
+
+// ── Graph state ───────────────────────────────────────────────
+let graphData = { nodes: [], links: [] };
+let simulation = null;
+let selectedNode = null;
+const expandedIds = new Set();
+
+// ── D3 setup ──────────────────────────────────────────────────
+const svg    = d3.select('#graph-svg');
+const rootG  = svg.append('g');
+const linkG  = rootG.append('g').attr('class', 'links');
+const nodeG  = rootG.append('g').attr('class', 'nodes');
+
+const zoom = d3.zoom()
+  .scaleExtent([0.2, 4])
+  .on('zoom', e => rootG.attr('transform', e.transform));
+
+svg.call(zoom).on('dblclick.zoom', null);
+
+function W() { return window.innerWidth; }
+function H() { return window.innerHeight; }
+
+function nodeR(d) {
+  if (d.depth === 0) return 15;
+  if (Math.abs(d.depth) === 1) return 8;
+  return 5;
+}
+
+function nodeColor(d) {
+  if (d.depth === 0) return '#f5f5f7';
+  if (Math.abs(d.depth) === 1) return '#4a9eff';
+  return d3.interpolateRgb('#2a6abf', '#112244')(Math.min((Math.abs(d.depth)-1)/3, 1));
+}
+
+function truncate(s, n) {
+  return s && s.length > n ? s.slice(0, n) + '…' : (s || '');
+}
+
+function nodeId(title) {
+  return 'w_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+// ── Render graph ──────────────────────────────────────────────
+function renderGraph() {
+  const nodes = graphData.nodes;
+  const links = graphData.links;
+
+  // Links
+  linkG.selectAll('.wiki-link')
+    .data(links, d => `${d.source.id||d.source}__${d.target.id||d.target}`)
+    .join(
+      e => e.append('line').attr('class', 'wiki-link'),
+      u => u,
+      x => x.remove()
+    );
+
+  // Nodes
+  const nodeEls = nodeG.selectAll('.wiki-node')
+    .data(nodes, d => d.id)
+    .join(
+      enter => {
+        const g = enter.append('g').attr('class', 'wiki-node');
+        g.append('circle');
+        g.append('text');
+
+        g.on('click', (event, d) => {
+          event.stopPropagation();
+          showPanel(d);
+        });
+
+        // Touch tap detection (not drag)
+        let tStart = null;
+        g.on('touchstart', (event, d) => {
+          tStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        }, { passive: true });
+        g.on('touchend', (event, d) => {
+          if (!tStart) return;
+          const dx = event.changedTouches[0].clientX - tStart.x;
+          const dy = event.changedTouches[0].clientY - tStart.y;
+          if (Math.sqrt(dx*dx+dy*dy) < 10) {
+            event.preventDefault();
+            showPanel(d);
+          }
+          tStart = null;
+        });
+
+        g.call(d3.drag()
+          .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+          .on('drag',  (e, d) => { d.fx=e.x; d.fy=e.y; })
+          .on('end',   (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; })
+        );
+
+        return g;
+      },
+      u => u,
+      x => x.remove()
+    );
+
+  // Update visuals
+  nodeG.selectAll('.wiki-node').each(function(d) {
+    const el = d3.select(this);
+    const r = nodeR(d);
+    el.classed('expanded', expandedIds.has(d.id));
+    el.select('circle')
+      .attr('r', r)
+      .attr('fill', nodeColor(d))
+      .attr('stroke', d.depth === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(74,158,255,0.15)')
+      .attr('stroke-width', d.depth === 0 ? 2 : 1);
+    el.select('text')
+      .attr('y', r + 5)
+      .attr('font-size', d.depth === 0 ? 12 : 10)
+      .attr('font-weight', d.depth === 0 ? '600' : '400')
+      .text(truncate(d.title, d.depth === 0 ? 22 : 16));
+  });
+
+  // Simulation
+  if (simulation) simulation.stop();
+
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id)
+      .distance(d => {
+        const s = graphData.nodes.find(n => n.id === (d.source.id||d.source));
+        return (s && s.depth === 0) ? 110 : 65;
+      })
+      .strength(0.4)
+    )
+    .force('charge', d3.forceManyBody().strength(d => d.depth === 0 ? -400 : -150))
+    .force('center', d3.forceCenter(W()/2, H()/2))
+    .force('collision', d3.forceCollide().radius(d => nodeR(d) + 20))
+    .on('tick', tick);
+
+  updateStatus();
+}
+
+function tick() {
+  linkG.selectAll('.wiki-link')
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  nodeG.selectAll('.wiki-node')
+    .attr('transform', d => `translate(${d.x||0},${d.y||0})`);
+}
+
+// ── Load Wikipedia page into graph ───────────────────────────
+async function loadPage(title, isRoot = true) {
+  showLoader(`"${title}"…`);
+
+  try {
+    const id = nodeId(title);
+
+    if (isRoot) {
+      // Fresh graph
+      graphData = { nodes: [], links: [] };
+      expandedIds.clear();
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('reset-btn').classList.add('visible');
+    }
+
+    // Add root node
+    if (!graphData.nodes.find(n => n.id === id)) {
+      graphData.nodes.push({ id, title, depth: isRoot ? 0 : 1 });
+    } else {
+      const n = graphData.nodes.find(n => n.id === id);
+      if (isRoot) n.depth = 0;
+    }
+
+    expandedIds.add(id);
+
+    // Fetch links
+    const allLinks = await wikiLinks(title);
+    // Shuffle and limit to 30 for readability
+    const shuffled = allLinks.sort(() => Math.random() - 0.5).slice(0, 30);
+
+    for (const lt of shuffled) {
+      const lid = nodeId(lt);
+      const depth = isRoot ? 1 : (graphData.nodes.find(n=>n.id===id)?.depth||0)+1;
+
+      if (!graphData.nodes.find(n => n.id === lid)) {
+        graphData.nodes.push({ id: lid, title: lt, depth });
+      }
+
+      const alreadyLinked = graphData.links.some(l => {
+        const s = l.source.id||l.source, t = l.target.id||l.target;
+        return (s===id&&t===lid)||(s===lid&&t===id);
+      });
+      if (!alreadyLinked) {
+        graphData.links.push({ source: id, target: lid });
+      }
+    }
+
+    renderGraph();
+    setStatus(`"${title}" — ${shuffled.length} liens`);
+
+    // Center on root node
+    setTimeout(() => {
+      const n = graphData.nodes.find(n => n.id === id);
+      if (n && n.x) {
+        const tx = W()/2 - n.x, ty = H()/2 - n.y;
+        svg.transition().duration(700).call(zoom.transform,
+          d3.zoomIdentity.translate(tx, ty));
+      }
+    }, 500);
+
+  } catch(e) {
+    setStatus('Erreur de chargement');
+    console.error(e);
+  } finally {
+    hideLoader();
+  }
+}
+
+// ── Info panel ────────────────────────────────────────────────
+function showPanel(d) {
+  selectedNode = d;
+  document.getElementById('ip-title').textContent = d.title;
+  document.getElementById('ip-extract').textContent = '…';
+  document.getElementById('info-panel').classList.add('open');
+
+  wikiExtract(d.title).then(txt => {
+    document.getElementById('ip-extract').textContent = txt || 'Aucun résumé disponible.';
+  }).catch(() => {
+    document.getElementById('ip-extract').textContent = 'Impossible de charger le résumé.';
+  });
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('open');
+  selectedNode = null;
+}
+
+document.getElementById('ip-explore-btn').addEventListener('click', () => {
+  if (!selectedNode) return;
+  const title = selectedNode.title;
+  closePanel();
+  loadPage(title, true);
+});
+
+document.getElementById('ip-wiki-btn').addEventListener('click', () => {
+  if (!selectedNode) return;
+  const url = `https://fr.wikipedia.org/wiki/${encodeURIComponent(selectedNode.title.replace(/ /g,'_'))}`;
+  window.open(url, '_blank');
+});
+
+// Swipe down to close panel
+(function() {
+  const panel = document.getElementById('info-panel');
+  let startY = 0, dragging = false;
+
+  panel.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    dragging = true;
+    panel.style.transition = 'none';
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = Math.max(0, e.touches[0].clientY - startY);
+    panel.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  panel.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)';
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 80) {
+      closePanel();
+      panel.style.transform = '';
+    } else {
+      panel.style.transform = '';
+    }
+  });
+})();
+
+// Close panel on background tap
+svg.on('click', closePanel);
+
+// ── Reset ─────────────────────────────────────────────────────
+document.getElementById('reset-btn').addEventListener('click', () => {
+  graphData = { nodes: [], links: [] };
+  expandedIds.clear();
+  if (simulation) simulation.stop();
+  linkG.selectAll('*').remove();
+  nodeG.selectAll('*').remove();
+  svg.call(zoom.transform, d3.zoomIdentity);
+  document.getElementById('empty-state').style.display = '';
+  document.getElementById('reset-btn').classList.remove('visible');
+  document.getElementById('search').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  updateStatus();
+  setStatus('Prêt');
+});
+
+// ── Search ────────────────────────────────────────────────────
+const searchEl  = document.getElementById('search');
+const clearBtn  = document.getElementById('search-clear');
+const suggestEl = document.getElementById('suggestions');
+
+let searchTimer = null;
+
+searchEl.addEventListener('input', () => {
+  const q = searchEl.value.trim();
+  clearBtn.classList.toggle('visible', q.length > 0);
+  clearTimeout(searchTimer);
+  if (!q) { suggestEl.classList.remove('open'); return; }
+  searchTimer = setTimeout(() => doSearch(q), 280);
+});
+
+searchEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const q = searchEl.value.trim();
+    if (!q) return;
+    suggestEl.classList.remove('open');
+    searchEl.blur();
+    loadPage(q, true);
+  }
+  if (e.key === 'Escape') {
+    suggestEl.classList.remove('open');
+    searchEl.blur();
+  }
+});
+
+clearBtn.addEventListener('click', () => {
+  searchEl.value = '';
+  clearBtn.classList.remove('visible');
+  suggestEl.classList.remove('open');
+  searchEl.focus();
+});
+
+async function doSearch(q) {
+  try {
+    const results = await wikiSearch(q);
+    renderSuggestions(results);
+  } catch(e) { /* silent */ }
+}
+
+function renderSuggestions(results) {
+  if (!results.length) { suggestEl.classList.remove('open'); return; }
+
+  suggestEl.innerHTML = results.map(r => {
+    const snippet = r.snippet.replace(/<[^>]*>/g,'').slice(0,80);
+    return `<div class="sug-item" data-title="${r.title.replace(/"/g,'&quot;')}">
+      <div class="sug-icon">W</div>
+      <div>
+        <div class="sug-title">${r.title}</div>
+        <div class="sug-snippet">${snippet}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  suggestEl.querySelectorAll('.sug-item').forEach(el => {
+    el.addEventListener('click', () => selectSuggestion(el.dataset.title));
+    el.addEventListener('touchend', e => { e.preventDefault(); selectSuggestion(el.dataset.title); });
+  });
+
+  suggestEl.classList.add('open');
+}
+
+function selectSuggestion(title) {
+  searchEl.value = title;
+  clearBtn.classList.add('visible');
+  suggestEl.classList.remove('open');
+  searchEl.blur();
+  loadPage(title, true);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#header') && !e.target.closest('#suggestions')) {
+    suggestEl.classList.remove('open');
+  }
+});
+
+// ── Status helpers ────────────────────────────────────────────
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+function updateStatus() {
+  document.getElementById('status-nodes').textContent = `${graphData.nodes.length} nœuds`;
+  document.getElementById('status-links').textContent = `${graphData.links.length} liens`;
+}
+
+function showLoader(msg='Chargement…') {
+  document.getElementById('loader-msg').textContent = msg;
+  document.getElementById('loader').classList.add('visible');
+}
+
+function hideLoader() {
+  document.getElementById('loader').classList.remove('visible');
+}
+
+// ── Header height for suggestions ────────────────────────────
+function updateHeaderHeight() {
+  const h = document.getElementById('header').offsetHeight;
+  document.documentElement.style.setProperty('--header-h', h + 'px');
+}
+window.addEventListener('resize', updateHeaderHeight);
+</script>
+</body>
+</html>
