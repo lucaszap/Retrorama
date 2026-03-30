@@ -583,10 +583,29 @@ function isDatePage(title) {
 // Filtre auteurs + œuvres via Wikidata (P31 = instance of)
 // Étape 1 : récupère les QID Wikidata via Wikipedia
 // Étape 2 : interroge Wikidata pour vérifier le type sémantique
-// Retourne { persons: Set<title>, works: Set<title> }
-// Exclut les personnages et entités fictifs
+// ── Cache localStorage ────────────────────────────────────────
+const CACHE_KEY = 'wikilinks_type_v1';
+
+function loadCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function saveCache(cache) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }
+  catch(e) {
+    // localStorage plein → on vide et on réessaie
+    try { localStorage.removeItem(CACHE_KEY); localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }
+    catch(e2) {}
+  }
+}
+
+// ── Filtre Wikidata optimisé ──────────────────────────────────
+// • Une seule étape : Wikidata accepte directement les titres frwiki
+// • Batches parallèles via Promise.all
+// • Cache localStorage pour éviter de requêter deux fois la même page
 async function filterByPersonsAndWorks(titles) {
-  const HUMAN_Q = new Set(['Q5']); // humain réel uniquement
+  const HUMAN_Q = new Set(['Q5']);
 
   const WORK_Q = new Set([
     'Q11424',    // film
@@ -610,7 +629,6 @@ async function filterByPersonsAndWorks(titles) {
     'Q2431196',  // œuvre audiovisuelle
   ]);
 
-  // Types fictifs à exclure explicitement
   const FICTIONAL_Q = new Set([
     'Q95074',    // personnage fictif
     'Q15632617', // personnage humain fictif
@@ -621,64 +639,67 @@ async function filterByPersonsAndWorks(titles) {
     'Q15711870', // personnage de fiction
   ]);
 
-  // ── Étape 1 : QID par batch de 50 ─────────────────────────
-  const qidByTitle = {};
-
-  for (let i = 0; i < titles.length; i += 50) {
-    const chunk = titles.slice(i, i + 50);
-    const p = new URLSearchParams({
-      action: 'query', titles: chunk.join('|'),
-      prop: 'pageprops', ppprop: 'wikibase_item',
-      format: 'json', origin: '*'
-    });
-    try {
-      const r = await fetch(`${WIKI}?${p}`);
-      const d = await r.json();
-      for (const page of Object.values(d.query.pages)) {
-        if (page.missing) continue;
-        const qid = page.pageprops?.wikibase_item;
-        if (qid) qidByTitle[page.title] = qid;
-      }
-    } catch(e) {}
-  }
-
-  const allQids = Object.values(qidByTitle);
-  if (!allQids.length) return { persons: new Set(), works: new Set() };
-
-  const titleByQid = {};
-  for (const [t, q] of Object.entries(qidByTitle)) titleByQid[q] = t;
-
-  // ── Étape 2 : P31 (instance of) via Wikidata par batch de 50 ──
+  const cache   = loadCache();
   const persons = new Set();
   const works   = new Set();
+  const toFetch = [];
 
-  for (let i = 0; i < allQids.length; i += 50) {
-    const chunk = allQids.slice(i, i + 50);
+  // ── 1. Résoudre depuis le cache ────────────────────────────
+  for (const title of titles) {
+    if      (cache[title] === 'person') persons.add(title);
+    else if (cache[title] === 'work')   works.add(title);
+    else if (!cache[title])             toFetch.push(title);
+    // cache[title] === 'none' → déjà vérifié, pas pertinent
+  }
+
+  if (toFetch.length === 0) return { persons, works };
+
+  // ── 2. Batches parallèles vers Wikidata (frwiki direct) ───
+  const batches = [];
+  for (let i = 0; i < toFetch.length; i += 50) batches.push(toFetch.slice(i, i + 50));
+
+  await Promise.all(batches.map(async chunk => {
     const p = new URLSearchParams({
-      action: 'wbgetentities', ids: chunk.join('|'),
-      props: 'claims', format: 'json', origin: '*'
+      action: 'wbgetentities',
+      sites: 'frwiki',
+      titles: chunk.join('|'),
+      props: 'claims|sitelinks',
+      sitefilter: 'frwiki',
+      format: 'json',
+      origin: '*'
     });
     try {
       const r = await fetch(`https://www.wikidata.org/w/api.php?${p}`);
       const d = await r.json();
-      for (const [qid, entity] of Object.entries(d.entities || {})) {
-        if (entity.missing) continue;
+      const found = new Set();
+
+      for (const entity of Object.values(d.entities || {})) {
+        const siteTitle = entity.sitelinks?.frwiki?.title;
+        if (!siteTitle) continue;
+        found.add(siteTitle);
+
         const p31vals = (entity.claims?.P31 || [])
-          .map(c => c.mainsnak?.datavalue?.value?.id)
-          .filter(Boolean);
+          .map(c => c.mainsnak?.datavalue?.value?.id).filter(Boolean);
 
-        // Exclure si un des types est fictif
-        if (p31vals.some(v => FICTIONAL_Q.has(v))) continue;
-
-        const title = titleByQid[qid];
-        if (!title) continue;
-
-        if (p31vals.some(v => HUMAN_Q.has(v))) persons.add(title);
-        else if (p31vals.some(v => WORK_Q.has(v))) works.add(title);
+        if (p31vals.some(v => FICTIONAL_Q.has(v))) {
+          cache[siteTitle] = 'none';
+        } else if (p31vals.some(v => HUMAN_Q.has(v))) {
+          cache[siteTitle] = 'person';
+          persons.add(siteTitle);
+        } else if (p31vals.some(v => WORK_Q.has(v))) {
+          cache[siteTitle] = 'work';
+          works.add(siteTitle);
+        } else {
+          cache[siteTitle] = 'none';
+        }
       }
-    } catch(e) {}
-  }
 
+      // Titres non trouvés dans Wikidata → marquer 'none'
+      for (const t of chunk) { if (!found.has(t)) cache[t] = 'none'; }
+    } catch(e) {}
+  }));
+
+  saveCache(cache);
   return { persons, works };
 }
 
@@ -871,8 +892,10 @@ async function loadPage(title, isRoot = true) {
     let persons = new Set(), works = new Set();
     if (filterOn) {
       setStatus('Filtrage auteurs / œuvres…');
-      ({ persons, works } = await filterByPersonsAndWorks(allLinks));
-      shuffled = allLinks.filter(t => persons.has(t) || works.has(t));
+      // Opt. 2 : limiter à 150 avant de requêter Wikidata
+      const toFilter = allLinks.slice(0, 150);
+      ({ persons, works } = await filterByPersonsAndWorks(toFilter));
+      shuffled = toFilter.filter(t => persons.has(t) || works.has(t));
     } else {
       shuffled = allLinks;
     }
