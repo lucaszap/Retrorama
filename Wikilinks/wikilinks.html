@@ -583,8 +583,10 @@ function isDatePage(title) {
 // Filtre auteurs + œuvres via Wikidata (P31 = instance of)
 // Étape 1 : récupère les QID Wikidata via Wikipedia
 // Étape 2 : interroge Wikidata pour vérifier le type sémantique
+// Retourne { persons: Set<title>, works: Set<title> }
+// Exclut les personnages et entités fictifs
 async function filterByPersonsAndWorks(titles) {
-  const HUMAN_Q = new Set(['Q5']); // humain
+  const HUMAN_Q = new Set(['Q5']); // humain réel uniquement
 
   const WORK_Q = new Set([
     'Q11424',    // film
@@ -606,6 +608,17 @@ async function filterByPersonsAndWorks(titles) {
     'Q47461344', // œuvre écrite (générique)
     'Q1261214',  // saga
     'Q2431196',  // œuvre audiovisuelle
+  ]);
+
+  // Types fictifs à exclure explicitement
+  const FICTIONAL_Q = new Set([
+    'Q95074',    // personnage fictif
+    'Q15632617', // personnage humain fictif
+    'Q14073567', // entité fictive
+    'Q15773317', // animal fictif
+    'Q17633516', // lieu fictif
+    'Q3658341',  // personnage littéraire
+    'Q15711870', // personnage de fiction
   ]);
 
   // ── Étape 1 : QID par batch de 50 ─────────────────────────
@@ -630,14 +643,14 @@ async function filterByPersonsAndWorks(titles) {
   }
 
   const allQids = Object.values(qidByTitle);
-  if (!allQids.length) return [];
+  if (!allQids.length) return { persons: new Set(), works: new Set() };
 
-  // Inverse map QID → title
   const titleByQid = {};
   for (const [t, q] of Object.entries(qidByTitle)) titleByQid[q] = t;
 
   // ── Étape 2 : P31 (instance of) via Wikidata par batch de 50 ──
-  const kept = new Set();
+  const persons = new Set();
+  const works   = new Set();
 
   for (let i = 0; i < allQids.length; i += 50) {
     const chunk = allQids.slice(i, i + 50);
@@ -650,20 +663,23 @@ async function filterByPersonsAndWorks(titles) {
       const d = await r.json();
       for (const [qid, entity] of Object.entries(d.entities || {})) {
         if (entity.missing) continue;
-        const p31 = entity.claims?.P31 || [];
-        for (const claim of p31) {
-          const val = claim.mainsnak?.datavalue?.value?.id;
-          if (HUMAN_Q.has(val) || WORK_Q.has(val)) {
-            const title = titleByQid[qid];
-            if (title) kept.add(title);
-            break;
-          }
-        }
+        const p31vals = (entity.claims?.P31 || [])
+          .map(c => c.mainsnak?.datavalue?.value?.id)
+          .filter(Boolean);
+
+        // Exclure si un des types est fictif
+        if (p31vals.some(v => FICTIONAL_Q.has(v))) continue;
+
+        const title = titleByQid[qid];
+        if (!title) continue;
+
+        if (p31vals.some(v => HUMAN_Q.has(v))) persons.add(title);
+        else if (p31vals.some(v => WORK_Q.has(v))) works.add(title);
       }
     } catch(e) {}
   }
 
-  return titles.filter(t => kept.has(t));
+  return { persons, works };
 }
 
 async function wikiExtract(title) {
@@ -802,6 +818,12 @@ function renderGraph() {
     )
     .force('charge', d3.forceManyBody().strength(d => d.depth === 0 ? -400 : -150))
     .force('center', d3.forceCenter(W()/2, H()/2))
+    .force('y-type', d3.forceY(d => {
+      if (d.depth === 0)           return H() * 0.5;
+      if (d.wikiType === 'work')   return H() * 0.28;
+      if (d.wikiType === 'person') return H() * 0.72;
+      return H() * 0.5;
+    }).strength(d => d.wikiType ? 0.07 : 0))
     .force('collision', d3.forceCollide().radius(d => nodeR(d) + 20))
     .on('tick', tick);
 
@@ -846,9 +868,11 @@ async function loadPage(title, isRoot = true) {
     const filterOn = document.getElementById('filter-checkbox').checked;
     // Filtre ON → auteurs + œuvres uniquement / Filtre OFF → tous les nœuds
     let shuffled;
+    let persons = new Set(), works = new Set();
     if (filterOn) {
       setStatus('Filtrage auteurs / œuvres…');
-      shuffled = await filterByPersonsAndWorks(allLinks);
+      ({ persons, works } = await filterByPersonsAndWorks(allLinks));
+      shuffled = allLinks.filter(t => persons.has(t) || works.has(t));
     } else {
       shuffled = allLinks;
     }
@@ -856,9 +880,10 @@ async function loadPage(title, isRoot = true) {
     for (const lt of shuffled) {
       const lid = nodeId(lt);
       const depth = isRoot ? 1 : (graphData.nodes.find(n=>n.id===id)?.depth||0)+1;
+      const wikiType = persons.has(lt) ? 'person' : works.has(lt) ? 'work' : null;
 
       if (!graphData.nodes.find(n => n.id === lid)) {
-        graphData.nodes.push({ id: lid, title: lt, depth });
+        graphData.nodes.push({ id: lid, title: lt, depth, wikiType });
       }
 
       const alreadyLinked = graphData.links.some(l => {
