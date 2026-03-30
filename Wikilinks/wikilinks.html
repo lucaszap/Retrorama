@@ -562,7 +562,22 @@ async function wikiLinks(title) {
   // Filter out meta pages (Catégorie:, Portail:, etc.)
   return page.links
     .map(l => l.title)
-    .filter(t => !t.includes(':'));
+    .filter(t => !t.includes(':'))
+    .filter(t => !isDatePage(t));
+}
+
+// Filtre silencieux : détecte les pages de dates
+function isDatePage(title) {
+  return (
+    /^\d{4}$/.test(title) ||                             // année seule : "1977"
+    /^\d{1,2} \w+$/.test(title) ||                       // jour + mois : "15 mai"
+    /^\w+ \d{4}$/.test(title) ||                         // mois + année : "mai 1977"
+    /^Années \d{4}/.test(title) ||                       // décennie : "Années 1970"
+    /^[IVXLCDM]+(er|e|ème)? siècle/.test(title) ||      // siècle : "XXe siècle"
+    /^\d+(er|e|ème)? siècle/.test(title) ||              // siècle chiffres arabes
+    /^\d{4} en /.test(title) ||                          // "2001 en musique"
+    /^Liste des/.test(title)                             // listes
+  );
 }
 
 // Filtre auteurs/types : batch query des catégories sur les titres donnés
