@@ -265,14 +265,14 @@
       transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .msg.in  { opacity: 1; transform: none; }
-    .msg.dim { opacity: 0.25; }
+    .msg.dim { opacity: 0.5; }
 
     /* Narrator */
     .msg-narrator {
       text-align: center;
       font-style: italic;
-      font-size: 13px; line-height: 1.75;
-      color: rgba(255,255,255,0.4);
+      font-size: 16px; line-height: 1.75;
+      color: rgba(255,255,255,0.45);
       padding: 0 20px;
       position: relative;
     }
@@ -300,8 +300,8 @@
       color: #090912;
       border-radius: 20px;
       padding: 18px 22px;
-      max-width: 300px; width: 100%;
-      font-size: 15px; line-height: 1.65;
+      max-width: 320px; width: 100%;
+      font-size: 16px; line-height: 1.65;
       font-weight: 400; letter-spacing: -0.15px;
       box-shadow:
         0 0 0 0.5px rgba(255,255,255,0.15),
@@ -331,6 +331,21 @@
       background: linear-gradient(to top, rgba(5,5,16,0.96) 55%, transparent);
     }
 
+    /* Pulsing dot during auto-play — subtle skip affordance */
+    #choices.auto-play { cursor: pointer; }
+    #choices.auto-play::after {
+      content: '';
+      position: absolute;
+      bottom: calc(var(--safe-bottom) + 16px); right: 22px;
+      width: 4px; height: 4px; border-radius: 50%;
+      background: rgba(255,255,255,0.22);
+      animation: pulse-dot 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.15; transform: scale(1); }
+      50%       { opacity: 0.4;  transform: scale(1.4); }
+    }
+
     .choice-btn {
       background: transparent;
       border: 0.5px solid rgba(255,255,255,0.13);
@@ -356,14 +371,6 @@
       text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
     }
 
-    /* Skip hint (auto-play mode) */
-    #hint {
-      text-align: right;
-      font-size: 13px; letter-spacing: 1px;
-      color: rgba(255,255,255,0.1);
-      padding: 18px 2px 0 0;
-      cursor: pointer; user-select: none;
-    }
   </style>
 </head>
 <body>
@@ -455,9 +462,10 @@
 
   // ── Engine ───────────────────────────────────────────────────
   let step = 0;
-  let gen  = 0;        // incremented on skip/reset to abort in-flight renders
-  let autoTimer = null;
-  let beatStarted = false; // true once current beat's DOM node is appended
+  let gen  = 0;
+  let autoTimer   = null;
+  let beatStarted = false;
+  let inAutoPlay  = false;
 
   const $dialogue = document.getElementById('dialogue');
   const $choices  = document.getElementById('choices');
@@ -465,26 +473,28 @@
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function tick()    { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
 
-  // Pause proportional to text length, between 1.4s and 3s
-  function readPause(text) { return Math.max(1400, Math.min(text.length * 35, 3000)); }
-
-  async function typeText(el, text, myGen, speed = 28) {
+  async function typeText(el, text, myGen, speed = 18) {
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
     el.appendChild(cursor);
     for (let i = 0; i < text.length; i++) {
       if (gen !== myGen) {
-        cursor.insertAdjacentText('beforebegin', text.slice(i)); // dump rest instantly
+        cursor.insertAdjacentText('beforebegin', text.slice(i));
         cursor.remove();
+        $dialogue.scrollTop = $dialogue.scrollHeight;
         return;
       }
       cursor.insertAdjacentText('beforebegin', text[i]);
-      await sleep(speed + Math.random() * 18);
+      if (i % 3 === 0) $dialogue.scrollTop = $dialogue.scrollHeight;
+      await sleep(speed + Math.random() * 8);
     }
     cursor.remove();
+    $dialogue.scrollTop = $dialogue.scrollHeight;
   }
 
   async function renderBeat(beat) {
+    inAutoPlay = false;
+    $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
     beatStarted = false;
     const myGen = gen;
@@ -494,14 +504,13 @@
     $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
 
     let msgEl, textEl;
-
     if (beat.type === 'narrator') {
       msgEl = textEl = document.createElement('div');
       msgEl.className = 'msg msg-narrator';
     } else {
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-lia';
-      const label  = document.createElement('div');
+      const label = document.createElement('div');
       label.className = 'lia-label'; label.textContent = 'LIA';
       textEl = document.createElement('div');
       textEl.className = 'lia-bubble';
@@ -514,43 +523,37 @@
     $dialogue.appendChild(msgEl);
     beatStarted = true;
     msgEl.classList.add('in');
-    await sleep(beat.type === 'lia' ? 200 : 180);
+    $dialogue.scrollTop = $dialogue.scrollHeight;
+
+    await sleep(beat.type === 'lia' ? 160 : 140);
     if (gen !== myGen) return;
 
-    await typeText(textEl, beat.text, myGen, beat.type === 'lia' ? 28 : 26);
+    await typeText(textEl, beat.text, myGen, beat.type === 'lia' ? 18 : 16);
     if (gen !== myGen) return;
 
-    $dialogue.scrollTo({ top: $dialogue.scrollHeight, behavior: 'smooth' });
-    showSkipHint();
+    // Enter auto-play mode: tap zone skips, timer advances
+    inAutoPlay = true;
+    $choices.classList.add('auto-play');
 
-    // Auto-advance after a read pause
     autoTimer = setTimeout(() => {
       if (gen !== myGen) return;
-      $choices.innerHTML = '';
+      inAutoPlay = false;
+      $choices.classList.remove('auto-play');
       step++;
       runStep();
-    }, readPause(beat.text));
+    }, 320); // very short breath between messages
   }
 
-  // Subtle tap-to-skip zone (barely visible »)
-  function showSkipHint() {
-    $choices.innerHTML = '';
-    const hint = document.createElement('div');
-    hint.id = 'hint';
-    hint.textContent = '»';
-    hint.addEventListener('click', skipToChoice);
-    $choices.appendChild(hint);
-  }
-
-  // Skip all remaining non-choice beats, jump to next choice
+  // Skip remaining non-choice beats, jump straight to next choice
   function skipToChoice() {
+    if (!inAutoPlay) return;
     gen++;
     clearTimeout(autoTimer);
+    inAutoPlay = false;
+    $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
 
-    // If the current beat was never appended, re-render it instantly
     let s = beatStarted ? step + 1 : step;
-
     while (s < STORY.length && STORY[s].type !== 'choice') {
       renderInstant(STORY[s]);
       s++;
@@ -559,7 +562,6 @@
     if (step < STORY.length) runStep();
   }
 
-  // Render a non-choice beat synchronously (no animation)
   function renderInstant(beat) {
     $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
     let msgEl;
@@ -577,10 +579,12 @@
       msgEl.appendChild(label); msgEl.appendChild(bubble);
     }
     $dialogue.appendChild(msgEl);
-    $dialogue.scrollTo({ top: $dialogue.scrollHeight, behavior: 'smooth' });
+    $dialogue.scrollTop = $dialogue.scrollHeight;
   }
 
   function showChoices(options) {
+    inAutoPlay = false;
+    $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
     options.forEach((opt, i) => {
       const btn = document.createElement('button');
@@ -603,11 +607,18 @@
   function resetGame() {
     gen++;
     clearTimeout(autoTimer);
+    inAutoPlay = false;
+    $choices.classList.remove('auto-play');
     step = 0;
     $dialogue.innerHTML = '';
     $choices.innerHTML = '';
     runStep();
   }
+
+  // Tap anywhere in choices zone during auto-play → skip to next choice
+  $choices.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('choice-btn')) skipToChoice();
+  });
 
   // ── Background: nebula + drifting stars ──────────────────────
   (function() {
