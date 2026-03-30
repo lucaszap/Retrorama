@@ -580,20 +580,22 @@ function isDatePage(title) {
   );
 }
 
-// Filtre auteurs/types : batch query des catégories sur les titres donnés
-async function filterByPersonsAndGenres(titles) {
+// Filtre auteurs + œuvres : batch query des catégories
+async function filterByPersonsAndWorks(titles) {
   const PERSON_KW = ['naissance en','décès en','né en','mort en','acteur','actrice',
     'réalisateur','réalisatrice','auteur','auteure','écrivain','écrivaine','musicien',
     'musicienne','chanteur','chanteuse','compositeur','compositrice','cinéaste',
     'scénariste','romancier','poète','poétesse','artiste','photographe','philosophe',
-    'historien','journaliste','dramaturge','metteur en scène'];
-  const GENRE_KW  = ['genre musical','genre cinématographique','genre littéraire',
-    'genre télévisuel','style musical','mouvement artistique','courant littéraire',
-    'courant musical','sous-genre','genre de','type de'];
+    'historien','journaliste','dramaturge','metteur en scène','producteur','productrice',
+    'illustrateur','mangaka','dessinateur','bande dessinée'];
+  const WORK_KW = ['film','série télévisée','série d\'animation','anime','manga',
+    'roman','album','jeu vidéo','bande dessinée','comics','pièce de théâtre',
+    'œuvre','long métrage','court métrage','documentaire','comédie musicale',
+    'album studio','album de','single','chanson','musique de film','bande originale',
+    'jeu de rôle','jeu de société'];
 
   const result = new Set();
 
-  // Batch par 50
   for (let i = 0; i < titles.length; i += 50) {
     const chunk = titles.slice(i, i + 50);
     const p = new URLSearchParams({
@@ -612,8 +614,8 @@ async function filterByPersonsAndGenres(titles) {
         if (page.missing) continue;
         const cats = (page.categories || []).map(c => c.title.toLowerCase());
         const isPerson = cats.some(c => PERSON_KW.some(k => c.includes(k)));
-        const isGenre  = cats.some(c => GENRE_KW.some(k => c.includes(k)));
-        if (isPerson || isGenre) result.add(page.title);
+        const isWork   = cats.some(c => WORK_KW.some(k => c.includes(k)));
+        if (isPerson || isWork) result.add(page.title);
       }
     } catch(e) { /* silent, skip chunk */ }
   }
@@ -799,10 +801,14 @@ async function loadPage(title, isRoot = true) {
     // Fetch links
     let allLinks = await wikiLinks(title);
     const filterOn = document.getElementById('filter-checkbox').checked;
-    // Filtre ON → 30 nœuds aléatoires / Filtre OFF → tous les nœuds
-    const shuffled = filterOn
-      ? allLinks.sort(() => Math.random() - 0.5).slice(0, 30)
-      : allLinks;
+    // Filtre ON → auteurs + œuvres uniquement / Filtre OFF → tous les nœuds
+    let shuffled;
+    if (filterOn) {
+      setStatus('Filtrage auteurs / œuvres…');
+      shuffled = await filterByPersonsAndWorks(allLinks);
+    } else {
+      shuffled = allLinks;
+    }
 
     for (const lt of shuffled) {
       const lid = nodeId(lt);
@@ -929,7 +935,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 const filterCb = document.getElementById('filter-checkbox');
 const filterLbl = document.getElementById('filter-label');
 filterCb.addEventListener('change', () => {
-  filterLbl.textContent = filterCb.checked ? '30 aléat.' : 'Tout';
+  filterLbl.textContent = filterCb.checked ? 'Auteurs/Œuvres' : 'Tout';
   filterLbl.style.color = filterCb.checked ? 'rgba(74,158,255,0.8)' : 'rgba(255,255,255,0.3)';
 });
 
