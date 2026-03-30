@@ -740,8 +740,10 @@ function nodeR(d) {
 }
 
 function nodeColor(d) {
-  if (d.depth === 0) return '#f5f5f7';
-  if (Math.abs(d.depth) === 1) return '#4a9eff';
+  if (d.depth === 0)             return '#f5f5f7';
+  if (d.wikiType === 'work')     return '#d4291a';
+  if (d.wikiType === 'person')   return '#4a9eff';
+  if (Math.abs(d.depth) === 1)   return '#4a9eff';
   return d3.interpolateRgb('#2a6abf', '#112244')(Math.min((Math.abs(d.depth)-1)/3, 1));
 }
 
