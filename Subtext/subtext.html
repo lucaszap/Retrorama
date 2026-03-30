@@ -209,6 +209,14 @@
       pointer-events: none; z-index: 1;
     }
 
+    /* Top fade overlay — hides text scrolling under the header */
+    #top-fade {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: calc(var(--safe-top) + 90px);
+      background: linear-gradient(to bottom, #050510 55%, transparent);
+      pointer-events: none; z-index: 15;
+    }
+
     /* ── HUD header ── */
     #hud-bar {
       position: fixed; top: 0; left: 0; right: 0;
@@ -220,6 +228,8 @@
       font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
       color: rgba(74,158,255,0.25);
       border-bottom: 0.5px solid rgba(74,158,255,0.06);
+      background: rgba(5,5,16,0.9);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
       z-index: 20;
     }
 
@@ -251,21 +261,12 @@
     }
     #dialogue::-webkit-scrollbar { display: none; }
 
-    #dialogue::before {
-      content: '';
-      position: sticky; top: 0;
-      display: block; height: 40px; margin: -28px -24px 0;
-      background: linear-gradient(to bottom, #050510, transparent);
-      pointer-events: none; z-index: 2;
-      flex-shrink: 0;
-    }
-
     .msg {
       opacity: 0; transform: translateY(10px);
       transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .msg.in  { opacity: 1; transform: none; }
-    .msg.dim { opacity: 0.5; }
+    .msg.dim { opacity: 0.62; }
 
     /* Narrator */
     .msg-narrator {
@@ -409,6 +410,7 @@
   <!-- ══ GAME ══ -->
   <div id="game">
     <canvas id="bg"></canvas>
+    <div id="top-fade"></div>
 
     <div id="hud-bar">
       <button id="back-btn" onclick="navigateBack()">
@@ -476,31 +478,36 @@
     }
   }
 
-  // Word-buffered typing: characters delay internally, but words appear atomically
-  // (prevents mid-word line-break glitch)
+  // Ghost-char typing: all chars are pre-rendered (invisible), then revealed one by one.
+  // The final layout is fixed from the start — no mid-word line-break glitch.
   async function typeText(el, text, myGen, speed = 22) {
+    // Pre-render all characters as invisible spans
+    const spans = Array.from(text).map(ch => {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      s.style.opacity = '0';
+      return s;
+    });
+    spans.forEach(s => el.appendChild(s));
+
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
-    el.appendChild(cursor);
-    let pending = '';
+    el.insertBefore(cursor, spans[0] || null);
 
-    for (let i = 0; i < text.length; i++) {
+    for (let i = 0; i < spans.length; i++) {
       if (gen !== myGen) {
-        cursor.insertAdjacentText('beforebegin', pending + text.slice(i));
+        // Abort: reveal all remaining instantly
+        for (let j = i; j < spans.length; j++) spans[j].style.opacity = '1';
         cursor.remove();
         smartScroll();
         return;
       }
-      const ch = text[i];
-      pending += ch;
-      // Flush to DOM at word boundary (space/newline) or last char
-      if (ch === ' ' || ch === '\n' || i === text.length - 1) {
-        cursor.insertAdjacentText('beforebegin', pending);
-        pending = '';
-        smartScroll();
-      }
+      spans[i].style.opacity = '1';
+      spans[i].insertAdjacentElement('afterend', cursor);
+      if (i % 4 === 0) smartScroll();
       await sleep(speed + Math.random() * 8);
     }
+
     cursor.remove();
     smartScroll();
   }
@@ -585,25 +592,37 @@
     $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
 
+    // Disable transitions for instant snap (no animated opacity flicker)
+    $dialogue.querySelectorAll('.msg').forEach(m => {
+      m.style.transition = 'none';
+      m.classList.add('dim');
+    });
+
     let s = beatStarted ? step + 1 : step;
     while (s < STORY.length && STORY[s].type !== 'choice') {
       renderInstant(STORY[s]);
       s++;
     }
     step = s;
-    if (step < STORY.length) runStep();
+
+    // Re-enable transitions after one frame
+    requestAnimationFrame(() => {
+      $dialogue.querySelectorAll('.msg').forEach(m => { m.style.transition = ''; });
+      if (step < STORY.length) runStep();
+    });
   }
 
   function renderInstant(beat) {
-    $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
     let msgEl;
     if (beat.type === 'narrator') {
       msgEl = document.createElement('div');
-      msgEl.className = 'msg msg-narrator in';
+      msgEl.className = 'msg msg-narrator in dim';
+      msgEl.style.transition = 'none';
       msgEl.textContent = beat.text;
     } else {
       msgEl = document.createElement('div');
-      msgEl.className = 'msg msg-lia in';
+      msgEl.className = 'msg msg-lia in dim';
+      msgEl.style.transition = 'none';
       const label = document.createElement('div');
       label.className = 'lia-label'; label.textContent = 'LIA';
       const bubble = document.createElement('div');
