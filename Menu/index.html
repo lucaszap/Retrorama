@@ -88,7 +88,8 @@
       background: rgba(255,255,255,0.07);
     }
 
-    .app-card.wiki-card::after  { background: radial-gradient(circle at 30% 50%, rgba(74,158,255,0.12), transparent 70%); }
+    .app-card.wiki-card::after     { background: radial-gradient(circle at 30% 50%, rgba(74,158,255,0.12), transparent 70%); }
+    .app-card.subtext-card::after  { background: radial-gradient(circle at 30% 50%, rgba(232,160,48,0.12), transparent 70%); }
     .app-card:active::after { opacity: 1; }
 
     /* Icon wrapper */
@@ -103,16 +104,30 @@
       overflow: hidden;
     }
 
-.wiki-card .app-icon-wrap {
+    .wiki-card .app-icon-wrap {
       background: linear-gradient(145deg, #080a1a, #0a1030);
       border: 0.5px solid rgba(74,158,255,0.2);
     }
 
-.wiki-icon-letter {
+    .subtext-card .app-icon-wrap {
+      background: linear-gradient(145deg, #120e04, #201608);
+      border: 0.5px solid rgba(232,160,48,0.25);
+    }
+
+    .wiki-icon-letter {
       font-size: 36px;
       font-weight: 700;
       color: #4a9eff;
       font-family: Georgia, 'Times New Roman', serif;
+      position: relative; z-index: 2;
+      line-height: 1;
+    }
+
+    .subtext-icon-letter {
+      font-size: 36px;
+      font-weight: 700;
+      color: #e8a030;
+      font-family: 'SF Mono', 'Fira Code', monospace;
       position: relative; z-index: 2;
       line-height: 1;
     }
@@ -175,6 +190,18 @@
       </div>
       <div class="app-arrow">›</div>
     </div>
+
+    <!-- SUBTEXT -->
+    <div class="app-card subtext-card" id="card-subtext">
+      <div class="app-icon-wrap">
+        <div class="subtext-icon-letter">S</div>
+      </div>
+      <div class="app-info">
+        <div class="app-name">Subtext</div>
+        <div class="app-desc">Aventure textuelle interactive</div>
+      </div>
+      <div class="app-arrow">›</div>
+    </div>
   </div>
 
   <script>
@@ -194,7 +221,8 @@
       });
     }
 
-    bindCard('card-wiki',  '../Wikilinks/wikilinks.html');
+    bindCard('card-wiki',    '../Wikilinks/wikilinks.html');
+    bindCard('card-subtext', '../Subtext/subtext.html');
 
     // ── Background parallax stars ──────────────────────────────
     (function() {

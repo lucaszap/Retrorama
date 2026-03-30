@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050510">
+  <title>Subtext</title>
+  <style>
+    :root {
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
+      --blue: #4a9eff;
+      --amber: #e8a030;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #050510;
+      overflow: hidden;
+      font-family: -apple-system, 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      color: #fff;
+    }
+
+    /* ══ LOADER ══════════════════════════════════════════════════ */
+    #loader {
+      position: fixed; inset: 0; z-index: 100;
+      background: #050510;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.9s ease;
+      /* subtle grid */
+      background-image:
+        linear-gradient(rgba(74,158,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,158,255,0.05) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+    #loader.fade-out { opacity: 0; pointer-events: none; }
+
+    /* Moving scanline */
+    #loader::before {
+      content: '';
+      position: absolute; left: 0; right: 0; height: 120px;
+      background: linear-gradient(to bottom,
+        transparent,
+        rgba(74,158,255,0.04) 40%,
+        rgba(74,158,255,0.07) 50%,
+        rgba(74,158,255,0.04) 60%,
+        transparent);
+      animation: scan 4s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scan { from { top: -120px; } to { top: 100%; } }
+
+    /* Corner brackets */
+    .corner {
+      position: absolute;
+      width: 18px; height: 18px;
+      border-color: rgba(74,158,255,0.35);
+      border-style: solid;
+    }
+    .corner.tl { top: calc(var(--safe-top) + 16px); left: 16px;  border-width: 1px 0 0 1px; }
+    .corner.tr { top: calc(var(--safe-top) + 16px); right: 16px; border-width: 1px 1px 0 0; }
+    .corner.bl { bottom: calc(var(--safe-bottom) + 16px); left: 16px;  border-width: 0 0 1px 1px; }
+    .corner.br { bottom: calc(var(--safe-bottom) + 16px); right: 16px; border-width: 0 1px 1px 0; }
+
+    /* HUD data corners */
+    .hud {
+      position: absolute;
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 9px;
+      color: rgba(74,158,255,0.45);
+      letter-spacing: 1px;
+      line-height: 2;
+    }
+    .hud.tl { top: calc(var(--safe-top) + 40px); left: 20px; }
+    .hud.tr { top: calc(var(--safe-top) + 40px); right: 20px; text-align: right; }
+    .hud.bl { bottom: calc(var(--safe-bottom) + 40px); left: 20px; }
+    .hud.br { bottom: calc(var(--safe-bottom) + 40px); right: 20px; text-align: right; }
+
+    /* Loader center block */
+    .loader-body {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      position: relative;
+    }
+
+    .loader-eyebrow {
+      font-family: 'SF Mono', monospace;
+      font-size: 9px; letter-spacing: 6px; text-transform: uppercase;
+      color: rgba(74,158,255,0.4);
+    }
+
+    .loader-wordmark {
+      font-size: 52px; font-weight: 700; letter-spacing: -3px;
+      color: #ffffff;
+      text-shadow: 0 0 60px rgba(74,158,255,0.25);
+    }
+
+    .loader-rule {
+      width: 1px; height: 40px;
+      background: linear-gradient(to bottom, rgba(74,158,255,0.4), transparent);
+      margin: -8px 0;
+    }
+
+    .progress-track {
+      width: 180px; height: 1px;
+      background: rgba(255,255,255,0.08);
+      position: relative; overflow: hidden;
+    }
+    .progress-fill {
+      position: absolute; top: 0; left: 0;
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, rgba(74,158,255,0.5), #fff);
+      box-shadow: 0 0 6px rgba(74,158,255,0.7);
+      transition: width 0.08s linear;
+    }
+
+    .loader-status-text {
+      font-family: 'SF Mono', monospace;
+      font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(74,158,255,0.55);
+      min-height: 14px;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+    .blink { animation: blink 0.9s step-end infinite; }
+
+    /* ══ GAME ════════════════════════════════════════════════════ */
+    #game {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.9s ease;
+    }
+    #game.on { opacity: 1; pointer-events: all; }
+
+    /* Stars */
+    #stars {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Very faint grid overlay */
+    #game::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(74,158,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,158,255,0.018) 1px, transparent 1px);
+      background-size: 64px 64px;
+      pointer-events: none; z-index: 1;
+    }
+
+    /* HUD header bar */
+    #hud-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: calc(44px + var(--safe-top));
+      padding-top: var(--safe-top);
+      display: flex; align-items: center; justify-content: space-between;
+      padding-left: 20px; padding-right: 20px;
+      font-family: 'SF Mono', monospace;
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(74,158,255,0.25);
+      border-bottom: 0.5px solid rgba(74,158,255,0.06);
+      z-index: 20; pointer-events: none;
+    }
+
+    /* ══ DIALOGUE ════════════════════════════════════════════════ */
+    #dialogue {
+      flex: 1;
+      overflow-y: auto;
+      padding: calc(var(--safe-top) + 56px) 24px 16px;
+      display: flex; flex-direction: column; gap: 28px;
+      position: relative; z-index: 10;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    #dialogue::-webkit-scrollbar { display: none; }
+
+    /* Top gradient fade for depth */
+    #dialogue::before {
+      content: '';
+      position: sticky; top: 0;
+      display: block; height: 48px; margin: -28px -24px 0;
+      background: linear-gradient(to bottom, #050510, transparent);
+      pointer-events: none; z-index: 2;
+      flex-shrink: 0;
+    }
+
+    /* Message base */
+    .msg {
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .msg.in { opacity: 1; transform: none; }
+    .msg.dim { opacity: 0.28; }
+
+    /* Narrator */
+    .msg-narrator {
+      text-align: center;
+      font-style: italic;
+      font-size: 13px; line-height: 1.75;
+      color: rgba(255,255,255,0.42);
+      padding: 0 20px;
+      position: relative;
+    }
+    .msg-narrator::before,
+    .msg-narrator::after {
+      content: '';
+      position: absolute; left: 50%; transform: translateX(-50%);
+      width: 32px; height: 0.5px;
+      background: rgba(255,255,255,0.12);
+    }
+    .msg-narrator::before { top: -10px; }
+    .msg-narrator::after  { bottom: -10px; }
+
+    /* Lia character */
+    .msg-lia {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+    }
+    .lia-label {
+      font-family: 'SF Mono', monospace;
+      font-size: 8px; letter-spacing: 4px; text-transform: uppercase;
+      color: rgba(74,158,255,0.55);
+    }
+    .lia-bubble {
+      background: #ffffff;
+      color: #090912;
+      border-radius: 20px;
+      padding: 18px 22px;
+      max-width: 300px; width: 100%;
+      font-size: 15px; line-height: 1.65;
+      font-weight: 400; letter-spacing: -0.15px;
+      box-shadow:
+        0 0 0 0.5px rgba(255,255,255,0.15),
+        0 8px 32px rgba(0,0,0,0.55),
+        0 2px 8px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    /* Typing cursor */
+    .cursor {
+      display: inline-block;
+      width: 1.5px; height: 1em;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: blink 0.7s step-end infinite;
+    }
+    .msg-narrator .cursor { background: rgba(255,255,255,0.5); }
+    .lia-bubble    .cursor { background: #090912; }
+
+    /* ══ CHOICES ═════════════════════════════════════════════════ */
+    #choices {
+      flex-shrink: 0;
+      padding: 14px 20px calc(var(--safe-bottom) + 20px);
+      min-height: 80px;
+      display: flex; flex-direction: column; gap: 9px;
+      position: relative; z-index: 10;
+      border-top: 0.5px solid rgba(255,255,255,0.05);
+      background: linear-gradient(to top, rgba(5,5,16,0.95) 60%, transparent);
+    }
+
+    .choice-btn {
+      background: transparent;
+      border: 0.5px solid rgba(255,255,255,0.13);
+      border-radius: 13px;
+      padding: 13px 18px;
+      color: rgba(255,255,255,0.75);
+      font-family: inherit; font-size: 14px;
+      text-align: left; cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, transform 0.08s;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0; transform: translateY(6px);
+      animation: slide-in 0.35s ease forwards;
+    }
+    @keyframes slide-in {
+      to { opacity: 1; transform: none; }
+    }
+    .choice-btn:nth-child(2) { animation-delay: 0.07s; }
+    .choice-btn:nth-child(3) { animation-delay: 0.14s; }
+    .choice-btn:hover  { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.22); }
+    .choice-btn:active { transform: scale(0.98); background: rgba(255,255,255,0.09); }
+
+    .choice-btn.reset {
+      border-color: rgba(74,158,255,0.25);
+      color: rgba(74,158,255,0.6);
+      text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    }
+
+    /* Continue hint */
+    #hint {
+      text-align: center;
+      font-size: 18px; line-height: 1;
+      color: rgba(255,255,255,0.18);
+      padding: 16px 0;
+      cursor: pointer; user-select: none;
+      animation: float 2.5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); opacity: 0.18; }
+      50%       { transform: translateY(4px); opacity: 0.45; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ LOADER ══ -->
+  <div id="loader">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="hud tl">
+      <div>STATION // EREBUS-7</div>
+      <div>COORD 0.000N 0.000E</div>
+      <div id="ld-date"></div>
+    </div>
+    <div class="hud tr">
+      <div>CRYO-SYS v4.2.1</div>
+      <div>PODS 001 / 128 ACTIFS</div>
+      <div>TEMP −196°C → 37°C</div>
+    </div>
+    <div class="hud bl">
+      <div>SIG ████████░░ 82%</div>
+      <div>BATT ███████░░░ 71%</div>
+    </div>
+    <div class="hud br">
+      <div>DURÉE 5555j 00:00</div>
+      <div>LIA OS 0.9.1-BETA</div>
+    </div>
+
+    <div class="loader-body">
+      <div class="loader-eyebrow">Système narratif</div>
+      <div class="loader-wordmark">SUBTEXT</div>
+      <div class="loader-rule"></div>
+      <div class="progress-track">
+        <div class="progress-fill" id="ld-bar"></div>
+      </div>
+      <div class="loader-status-text" id="ld-status">INIT<span class="blink">_</span></div>
+    </div>
+  </div>
+
+  <!-- ══ GAME ══ -->
+  <div id="game">
+    <canvas id="stars"></canvas>
+    <div id="hud-bar">
+      <span>SUBTEXT</span>
+      <span id="hud-r">SCN_001</span>
+    </div>
+    <div id="dialogue"></div>
+    <div id="choices"></div>
+  </div>
+
+  <script>
+  // ── Story ────────────────────────────────────────────────────
+  const STORY = [
+    { type: 'lia',
+      text: 'Bonjour Slayer, vous venez de passer 5555 jours en suspension cryogénique.' },
+    { type: 'lia',
+      text: 'Comment vous sentez vous\u00a0?' },
+    { type: 'narrator',
+      text: 'Lia — une IA — vous réveille de votre sommeil dans une station spatiale abandonnée.' },
+    { type: 'choice',
+      options: [{ label: 'Hey, y a quelqu\'un ici\u00a0?', next: 4 }] },
+    { type: 'narrator',
+      text: 'Il semblerait que personne ne vous entend dans l\'espace.' },
+    { type: 'choice',
+      options: [{ label: 'Tu sais ce qu\'il se passe ici\u00a0?', next: 6 }] },
+    { type: 'lia',
+      text: 'Non, je suis comme toi. J\'ai l\'impression que j\'ai perdu ma mémoire vive. Quelqu\'un a décidément pris l\'initiative de me débrancher. Mais les senseurs du vaisseau m\'ont rallumé. Tu te trouvais là... Endormi dans le frigo. Et je t\'ai réveillé.' },
+    { type: 'choice',
+      options: [{ label: 'Reset', reset: true }] }
+  ];
+
+  // ── Engine ───────────────────────────────────────────────────
+  let step = 0;
+  const $dialogue = document.getElementById('dialogue');
+  const $choices  = document.getElementById('choices');
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function tick()    { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
+
+  async function typeText(el, text, speed = 28) {
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    el.appendChild(cursor);
+    for (let i = 0; i < text.length; i++) {
+      cursor.insertAdjacentText('beforebegin', text[i]);
+      await sleep(speed + Math.random() * 18);
+    }
+    cursor.remove();
+  }
+
+  async function renderBeat(beat) {
+    $choices.innerHTML = '';
+
+    if (beat.type === 'choice') {
+      showChoices(beat.options);
+      return;
+    }
+
+    // Dim old messages
+    $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
+
+    let msgEl;
+
+    if (beat.type === 'narrator') {
+      msgEl = document.createElement('div');
+      msgEl.className = 'msg msg-narrator';
+      $dialogue.appendChild(msgEl);
+      await tick();
+      msgEl.classList.add('in');
+      await sleep(180);
+      await typeText(msgEl, beat.text, 26);
+
+    } else if (beat.type === 'lia') {
+      msgEl = document.createElement('div');
+      msgEl.className = 'msg msg-lia';
+      const label  = document.createElement('div');
+      label.className = 'lia-label';
+      label.textContent = 'LIA';
+      const bubble = document.createElement('div');
+      bubble.className = 'lia-bubble';
+      msgEl.appendChild(label);
+      msgEl.appendChild(bubble);
+      $dialogue.appendChild(msgEl);
+      await tick();
+      msgEl.classList.add('in');
+      await sleep(200);
+      await typeText(bubble, beat.text, 28);
+    }
+
+    $dialogue.scrollTo({ top: $dialogue.scrollHeight, behavior: 'smooth' });
+    showHint();
+  }
+
+  function showChoices(options) {
+    $choices.innerHTML = '';
+    options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn' + (opt.reset ? ' reset' : '');
+      btn.textContent = opt.label;
+      btn.style.animationDelay = (i * 0.07) + 's';
+      btn.addEventListener('click', () => {
+        if (opt.reset) { resetGame(); }
+        else { step = opt.next; runStep(); }
+      });
+      $choices.appendChild(btn);
+    });
+  }
+
+  function showHint() {
+    $choices.innerHTML = '';
+    const hint = document.createElement('div');
+    hint.id = 'hint';
+    hint.textContent = '▾';
+    hint.addEventListener('click', () => { step++; runStep(); });
+    $choices.appendChild(hint);
+  }
+
+  function runStep() {
+    if (step >= STORY.length) return;
+    renderBeat(STORY[step]);
+  }
+
+  function resetGame() {
+    step = 0;
+    $dialogue.innerHTML = '';
+    $choices.innerHTML = '';
+    runStep();
+  }
+
+  // ── Background stars ─────────────────────────────────────────
+  (function() {
+    const cv = document.getElementById('stars');
+    const cx = cv.getContext('2d');
+    let W, H, stars;
+    function resize() { W = cv.width = window.innerWidth; H = cv.height = window.innerHeight; }
+    function init() {
+      resize();
+      stars = Array.from({ length: 90 }, () => ({
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 0.9 + 0.1,
+        a: Math.random() * 0.25 + 0.04,
+        sp: Math.random() * 0.002 + 0.001,
+        ph: Math.random() * Math.PI * 2
+      }));
+    }
+    function draw(t) {
+      cx.clearRect(0, 0, W, H);
+      for (const s of stars) {
+        const a = s.a * (0.6 + 0.4 * Math.sin(t * s.sp * 1000 + s.ph));
+        cx.fillStyle = `rgba(200,220,255,${a})`;
+        cx.fillRect(s.x, s.y, s.r, s.r);
+      }
+      requestAnimationFrame(draw);
+    }
+    window.addEventListener('load', () => { init(); requestAnimationFrame(draw); });
+    window.addEventListener('resize', resize);
+  })();
+
+  // ── Loader ───────────────────────────────────────────────────
+  (function() {
+    const loader  = document.getElementById('loader');
+    const bar     = document.getElementById('ld-bar');
+    const status  = document.getElementById('ld-status');
+    const dateEl  = document.getElementById('ld-date');
+
+    dateEl.textContent = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+
+    const steps = [
+      'INIT SYSTÈMES CRYO',
+      'DÉTECTION SIGNES VITAUX',
+      'PROTOCOLE RÉVEIL',
+      'SYNC LIA OS',
+      'CHARGEMENT DONNÉES',
+      'PRÊT'
+    ];
+    let si = 0, progress = 0;
+
+    const sti = setInterval(() => {
+      si = Math.min(si + 1, steps.length - 1);
+      status.innerHTML = steps[si] + '<span class="blink">_</span>';
+    }, 520);
+
+    const pi = setInterval(() => {
+      progress += Math.random() * 5 + 1.5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(pi);
+        clearInterval(sti);
+        status.innerHTML = 'PRÊT<span class="blink">_</span>';
+      }
+      bar.style.width = progress + '%';
+    }, 75);
+
+    setTimeout(() => {
+      loader.classList.add('fade-out');
+      document.getElementById('game').classList.add('on');
+      setTimeout(() => {
+        loader.style.display = 'none';
+        runStep();
+      }, 900);
+    }, 3600);
+  })();
+  </script>
+</body>
+</html>
