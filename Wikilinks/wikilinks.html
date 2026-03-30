@@ -474,7 +474,7 @@
   </div>
 
   <div id="filter-wrap">
-    <span id="filter-label">Filtre</span>
+    <span id="filter-label">Tout</span>
     <label id="filter-toggle" aria-label="Filtrer par auteurs et types">
       <input type="checkbox" id="filter-checkbox">
       <div class="toggle-track"></div>
@@ -784,13 +784,10 @@ async function loadPage(title, isRoot = true) {
     // Fetch links
     let allLinks = await wikiLinks(title);
     const filterOn = document.getElementById('filter-checkbox').checked;
-    if (filterOn) {
-      setStatus('Filtrage auteurs / types…');
-      allLinks = await filterByPersonsAndGenres(allLinks);
-    }
-    // Limit (no random shuffle — Wikipedia returns alphabetically, keeps results consistent)
-    const limit = filterOn ? 60 : 80;
-    const shuffled = allLinks.slice(0, limit);
+    // Filtre ON → 30 nœuds aléatoires / Filtre OFF → tous les nœuds
+    const shuffled = filterOn
+      ? allLinks.sort(() => Math.random() - 0.5).slice(0, 30)
+      : allLinks;
 
     for (const lt of shuffled) {
       const lid = nodeId(lt);
@@ -917,7 +914,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 const filterCb = document.getElementById('filter-checkbox');
 const filterLbl = document.getElementById('filter-label');
 filterCb.addEventListener('change', () => {
-  filterLbl.textContent = filterCb.checked ? 'Auteurs/Types' : 'Filtre';
+  filterLbl.textContent = filterCb.checked ? '30 aléat.' : 'Tout';
   filterLbl.style.color = filterCb.checked ? 'rgba(74,158,255,0.8)' : 'rgba(255,255,255,0.3)';
 });
 
