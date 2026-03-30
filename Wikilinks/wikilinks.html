@@ -788,9 +788,9 @@ async function loadPage(title, isRoot = true) {
       setStatus('Filtrage auteurs / types…');
       allLinks = await filterByPersonsAndGenres(allLinks);
     }
-    // Shuffle and limit for readability
-    const limit = filterOn ? 50 : 30;
-    const shuffled = allLinks.sort(() => Math.random() - 0.5).slice(0, limit);
+    // Limit (no random shuffle — Wikipedia returns alphabetically, keeps results consistent)
+    const limit = filterOn ? 60 : 80;
+    const shuffled = allLinks.slice(0, limit);
 
     for (const lt of shuffled) {
       const lid = nodeId(lt);
