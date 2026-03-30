@@ -88,7 +88,6 @@
       background: rgba(255,255,255,0.07);
     }
 
-    .app-card.retro-card::after { background: radial-gradient(circle at 30% 50%, rgba(212,41,26,0.12), transparent 70%); }
     .app-card.wiki-card::after  { background: radial-gradient(circle at 30% 50%, rgba(74,158,255,0.12), transparent 70%); }
     .app-card:active::after { opacity: 1; }
 
@@ -104,30 +103,12 @@
       overflow: hidden;
     }
 
-    .retro-card .app-icon-wrap {
-      background: linear-gradient(145deg, #1a0a08, #2d0f0a);
-      border: 0.5px solid rgba(212,41,26,0.25);
-    }
-
-    .wiki-card .app-icon-wrap {
+.wiki-card .app-icon-wrap {
       background: linear-gradient(145deg, #080a1a, #0a1030);
       border: 0.5px solid rgba(74,158,255,0.2);
     }
 
-    .app-icon-img {
-      width: 46px; height: 46px;
-      object-fit: contain;
-      position: relative; z-index: 2;
-    }
-
-    #icon-stars {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .wiki-icon-letter {
+.wiki-icon-letter {
       font-size: 36px;
       font-weight: 700;
       color: #4a9eff;
@@ -147,7 +128,6 @@
       margin-bottom: 4px;
     }
 
-    .retro-card .app-name { color: #f0ece4; }
     .wiki-card .app-name  { color: #f5f5f7; }
 
     .app-desc {
@@ -184,19 +164,6 @@
   <div id="site-title">Retro Rama</div>
 
   <div id="menu">
-    <!-- RETRORAMA -->
-    <div class="app-card retro-card" id="card-retro">
-      <div class="app-icon-wrap">
-        <canvas id="icon-stars"></canvas>
-        <img class="app-icon-img" src="retro-rama-logo.png" alt="Retrorama">
-      </div>
-      <div class="app-info">
-        <div class="app-name">Retrorama</div>
-        <div class="app-desc">Cartographie des influences culturelles</div>
-      </div>
-      <div class="app-arrow">›</div>
-    </div>
-
     <!-- WIKILINKS -->
     <div class="app-card wiki-card" id="card-wiki">
       <div class="app-icon-wrap">
@@ -227,7 +194,6 @@
       });
     }
 
-    bindCard('card-retro', '../Projet/retrorama.html');
     bindCard('card-wiki',  '../Wikilinks/wikilinks.html');
 
     // ── Background parallax stars ──────────────────────────────
@@ -273,79 +239,7 @@
       window.addEventListener('resize', resize);
     })();
 
-    // ── Icon star animation (hover effect on retro card) ────────
-    (function() {
-      const canvas = document.getElementById('icon-stars');
-      const ctx = canvas.getContext('2d');
-      const wrap = canvas.parentElement;
 
-      let W, H, stars = [], intensity = 0, target = 0;
-
-      function resize() {
-        W = canvas.width  = wrap.offsetWidth;
-        H = canvas.height = wrap.offsetHeight;
-      }
-
-      class Star {
-        constructor() { this.reset(); }
-        reset() {
-          this.angle = Math.random() * Math.PI * 2;
-          this.dist  = Math.random() * 30 + 4;
-          this.speed = Math.random() * 1.2 + 0.5;
-          this.len   = Math.random() * 14 + 7;
-          this.bri   = Math.random() * 0.45 + 0.78;
-          this.opa   = Math.random() * 0.4 + 0.3;
-        }
-        update() {
-          if (intensity > 0.06) {
-            this.dist += this.speed * intensity;
-            this.speed = Math.min(this.speed * 1.026, 12);
-            if (this.dist > Math.max(W, H) * 1.6) this.reset();
-          } else {
-            this.speed = Math.random() * 1.2 + 0.5;
-          }
-        }
-        draw() {
-          const i = intensity;
-          const cx = W/2, cy = H/2;
-          const x  = cx + Math.cos(this.angle) * this.dist;
-          const y  = cy + Math.sin(this.angle) * this.dist;
-          if (i < 0.12) {
-            ctx.fillStyle = `rgba(255,245,230,${this.bri + Math.sin(Date.now()/350+this.angle)*0.17})`;
-            ctx.fillRect(x-1, y-1, 2, 2);
-          } else {
-            const pd = Math.max(0, this.dist - this.len * i);
-            const px = cx + Math.cos(this.angle) * pd;
-            const py = cy + Math.sin(this.angle) * pd;
-            let a = this.bri * Math.max(0.3, 1 - this.dist/(Math.max(W,H)*0.75)) * this.opa;
-            ctx.strokeStyle = `rgba(255,245,215,${a})`;
-            ctx.lineWidth = 1.5 + i;
-            ctx.lineCap = 'round';
-            ctx.shadowBlur = 5 * i;
-            ctx.shadowColor = '#ffe89f';
-            ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y); ctx.stroke();
-            ctx.shadowBlur = 0;
-          }
-        }
-      }
-
-      function init() { resize(); stars = Array.from({length:50}, () => new Star()); }
-
-      function animate() {
-        ctx.clearRect(0, 0, W, H);
-        intensity += (target - intensity) * 0.02;
-        for (const s of stars) { s.update(); s.draw(); }
-        requestAnimationFrame(animate);
-      }
-
-      const card = document.getElementById('card-retro');
-      card.addEventListener('mouseenter', () => target = 1);
-      card.addEventListener('mouseleave', () => target = 0);
-      card.addEventListener('touchstart', () => target = 1, {passive:true});
-      card.addEventListener('touchend',   () => { target = 0; });
-
-      window.addEventListener('load', () => { init(); requestAnimationFrame(animate); window.addEventListener('resize', resize); });
-    })();
   </script>
 </body>
 </html>
