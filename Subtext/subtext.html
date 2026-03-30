@@ -244,7 +244,7 @@
       flex: 1;
       overflow-y: auto;
       padding: calc(var(--safe-top) + 56px) 24px 16px;
-      display: flex; flex-direction: column; gap: 28px;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 28px;
       position: relative; z-index: 10;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
@@ -274,17 +274,7 @@
       font-size: 16px; line-height: 1.75;
       color: rgba(255,255,255,0.45);
       padding: 0 20px;
-      position: relative;
     }
-    .msg-narrator::before,
-    .msg-narrator::after {
-      content: '';
-      position: absolute; left: 50%; transform: translateX(-50%);
-      width: 32px; height: 0.5px;
-      background: rgba(255,255,255,0.1);
-    }
-    .msg-narrator::before { top: -10px; }
-    .msg-narrator::after  { bottom: -10px; }
 
     /* Lia */
     .msg-lia {
@@ -307,6 +297,8 @@
         0 0 0 0.5px rgba(255,255,255,0.15),
         0 8px 32px rgba(0,0,0,0.55),
         0 2px 8px rgba(0,0,0,0.3);
+      transition: min-height 0.22s ease;
+      overflow: hidden;
     }
 
     /* Typing cursor */
@@ -473,41 +465,78 @@
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function tick()    { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
 
-  async function typeText(el, text, myGen, speed = 18) {
+  // Scroll only when the latest message gets within 80px of the choices zone
+  function smartScroll() {
+    const lastMsg = $dialogue.lastElementChild;
+    if (!lastMsg) return;
+    const refBottom  = lastMsg.getBoundingClientRect().bottom;
+    const threshold  = $choices.getBoundingClientRect().top - 80;
+    if (refBottom > threshold) {
+      $dialogue.scrollTop += refBottom - threshold;
+    }
+  }
+
+  // Word-buffered typing: characters delay internally, but words appear atomically
+  // (prevents mid-word line-break glitch)
+  async function typeText(el, text, myGen, speed = 22) {
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
     el.appendChild(cursor);
+    let pending = '';
+
     for (let i = 0; i < text.length; i++) {
       if (gen !== myGen) {
-        cursor.insertAdjacentText('beforebegin', text.slice(i));
+        cursor.insertAdjacentText('beforebegin', pending + text.slice(i));
         cursor.remove();
-        $dialogue.scrollTop = $dialogue.scrollHeight;
+        smartScroll();
         return;
       }
-      cursor.insertAdjacentText('beforebegin', text[i]);
-      if (i % 3 === 0) $dialogue.scrollTop = $dialogue.scrollHeight;
+      const ch = text[i];
+      pending += ch;
+      // Flush to DOM at word boundary (space/newline) or last char
+      if (ch === ' ' || ch === '\n' || i === text.length - 1) {
+        cursor.insertAdjacentText('beforebegin', pending);
+        pending = '';
+        smartScroll();
+      }
       await sleep(speed + Math.random() * 8);
     }
     cursor.remove();
-    $dialogue.scrollTop = $dialogue.scrollHeight;
+    smartScroll();
   }
 
   async function renderBeat(beat) {
-    inAutoPlay = false;
-    $choices.classList.remove('auto-play');
-    $choices.innerHTML = '';
     beatStarted = false;
     const myGen = gen;
+    $choices.innerHTML = '';
 
-    if (beat.type === 'choice') { showChoices(beat.options); return; }
+    if (beat.type === 'choice') {
+      inAutoPlay = false;
+      $choices.classList.remove('auto-play');
+      showChoices(beat.options);
+      return;
+    }
+
+    // Enable skip immediately (even before typing starts)
+    inAutoPlay = true;
+    $choices.classList.add('auto-play');
 
     $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
 
     let msgEl, textEl;
+
     if (beat.type === 'narrator') {
       msgEl = textEl = document.createElement('div');
       msgEl.className = 'msg msg-narrator';
+      $dialogue.appendChild(msgEl);
+      beatStarted = true;
+      await tick();
+      if (gen !== myGen) return;
+      msgEl.classList.add('in');
+      smartScroll();
+
     } else {
+      // Build Lia bubble
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-lia';
       const label = document.createElement('div');
@@ -515,38 +544,41 @@
       textEl = document.createElement('div');
       textEl.className = 'lia-bubble';
       msgEl.appendChild(label); msgEl.appendChild(textEl);
+
+      // Pre-measure final height so bubble never clips or jumps
+      msgEl.style.visibility = 'hidden';
+      textEl.textContent = beat.text;
+      $dialogue.appendChild(msgEl);
+      beatStarted = true;
+      await tick();
+      if (gen !== myGen) return;
+      const finalH = textEl.scrollHeight;
+      textEl.textContent = '';
+      textEl.style.minHeight = finalH + 'px';
+      msgEl.style.visibility = '';
+      msgEl.classList.add('in');
+      smartScroll();
     }
 
-    await tick();
+    await sleep(beat.type === 'lia' ? 160 : 130);
     if (gen !== myGen) return;
 
-    $dialogue.appendChild(msgEl);
-    beatStarted = true;
-    msgEl.classList.add('in');
-    $dialogue.scrollTop = $dialogue.scrollHeight;
-
-    await sleep(beat.type === 'lia' ? 160 : 140);
+    await typeText(textEl, beat.text, myGen, 22);
     if (gen !== myGen) return;
 
-    await typeText(textEl, beat.text, myGen, beat.type === 'lia' ? 18 : 16);
-    if (gen !== myGen) return;
-
-    // Enter auto-play mode: tap zone skips, timer advances
-    inAutoPlay = true;
-    $choices.classList.add('auto-play');
-
+    // Brief breath, then auto-advance
     autoTimer = setTimeout(() => {
       if (gen !== myGen) return;
       inAutoPlay = false;
       $choices.classList.remove('auto-play');
       step++;
       runStep();
-    }, 320); // very short breath between messages
+    }, 320);
   }
 
   // Skip remaining non-choice beats, jump straight to next choice
   function skipToChoice() {
-    if (!inAutoPlay) return;
+    if (!inAutoPlay && !beatStarted) return;
     gen++;
     clearTimeout(autoTimer);
     inAutoPlay = false;
