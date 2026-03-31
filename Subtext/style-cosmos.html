@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>COSMOS — Galaxie Nexus</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0A0810;font-family:-apple-system,'Arial Black',sans-serif;color:#fff}
+
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* TOP COSMOS BAR */
+.cosmos-bar{flex-shrink:0;overflow:hidden;padding:5px 0 3px}
+.cosmos-text{font-size:clamp(50px,16vw,68px);font-weight:900;letter-spacing:-2px;color:#4433EE;line-height:0.9;text-align:center;text-transform:uppercase;white-space:nowrap}
+.cosmos-text .star-burst{color:#F0EDE8;font-size:0.6em;display:inline-block;animation:pulse-star 2s ease-in-out infinite}
+@keyframes pulse-star{0%,100%{opacity:1;text-shadow:0 0 8px #fff}50%{opacity:0.5;text-shadow:0 0 24px #fff}}
+.cosmos-meta{display:flex;justify-content:space-between;padding:2px 12px;font-family:'Courier New',monospace;font-size:7px;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase}
+
+.divider{height:.5px;background:rgba(255,255,255,0.1);margin:0 12px}
+
+/* GALAXY ZONE */
+.galaxy-zone{flex:1;position:relative;overflow:hidden;min-height:0;cursor:grab}
+.galaxy-zone:active{cursor:grabbing}
+
+#galaxy-svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* HUD labels */
+.hud-label{position:absolute;font-family:'Courier New',monospace;pointer-events:none}
+.lbl-tl{top:10px;left:10px;font-size:7px;letter-spacing:2px;color:rgba(68,51,238,0.65);line-height:1.8;text-transform:uppercase}
+.lbl-br{bottom:10px;right:10px;text-align:right;font-size:7px;letter-spacing:1.5px;color:rgba(255,255,255,0.25);line-height:1.8}
+
+/* TOOLTIP */
+#tooltip{position:absolute;display:none;background:rgba(10,8,16,0.94);border:0.5px solid var(--tip-color,#4433EE);padding:10px 12px;max-width:180px;pointer-events:none;z-index:50}
+#tooltip .tip-name{font-family:'Courier New',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tip-color,#4433EE);margin-bottom:5px;line-height:1.4}
+#tooltip .tip-info{font-family:'Courier New',monospace;font-size:8px;color:rgba(255,255,255,0.55);line-height:1.6;letter-spacing:.3px}
+#tooltip .tip-coords{font-size:6px;color:rgba(255,255,255,0.25);margin-top:6px;letter-spacing:1px}
+
+/* BOTTOM COSMOS BAR */
+.cosmos-bar-bot{flex-shrink:0;padding:3px 0 6px}
+.cosmos-text-bot{font-size:clamp(50px,16vw,68px);font-weight:900;letter-spacing:-2px;color:#4433EE;line-height:0.9;text-align:center;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cosmos-bar">
+    <div class="cosmos-text">COSMOS <span class="star-burst">✦</span></div>
+    <div class="cosmos-meta">
+      <span>Universal · 出会い · バイナリ</span>
+      <span>A Guide To The</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="galaxy-zone" id="galaxy-zone">
+    <svg id="galaxy-svg"></svg>
+
+    <div class="hud-label lbl-tl">
+      GALAXIE NEXUS<br>
+      <span style="color:rgba(200,255,0,0.5)">LIA :: NON LOCALISÉE</span><br>
+      ESC FILE 03
+    </div>
+    <div class="hud-label lbl-br">
+      Life / Form<br>
+      Can't Be<br>
+      Contained
+    </div>
+
+    <div id="tooltip">
+      <div class="tip-name" id="tip-name"></div>
+      <div class="tip-info" id="tip-info"></div>
+      <div class="tip-coords" id="tip-coords"></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="cosmos-bar-bot">
+    <div class="cosmos-text-bot">COSMOS</div>
+    <div class="cosmos-meta">
+      <span>Universal · 出会い · バイナリ</span>
+      <span>A Guide To The</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── GALAXY DATA ───────────────────────────────────────────────────
+
+const SYSTEMS = [
+  { x:0,    y:0,    r:9,  name:'ESC PRIME',             color:'#4488FF', glow:'rgba(68,136,255,0.5)',
+    info:'Siège de l\'Earth Space Council.\nEpicentre du pouvoir galactique.',
+    coords:'N.00.000 · E.00.000' },
+  { x:-68,  y:18,   r:6,  name:'EREBUS-7',              color:'#00E5FF', glow:'rgba(0,229,255,0.4)',
+    info:'Station cryogénique.\nTu t\'y réveilles après 5555 jours.',
+    coords:'N.12.448 · E.-31.220' },
+  { x:90,   y:-38,  r:5,  name:'NEXUS GATE',            color:'#9988FF', glow:'rgba(153,136,255,0.3)',
+    info:'Principal transit interstellaire.\nContrôlé par l\'ESC.',
+    coords:'N.08.110 · E.44.320' },
+  { x:115,  y:58,   r:7,  name:'// LIA :: LAST SIGNAL', color:'#C8FF00', glow:'rgba(200,255,0,0.45)',
+    info:'Zone INTERDITE — Niveau 7.\nDernier signal de l\'IA LIA\ndétecté ici. Origine inconnue.',
+    coords:'N.-22.781 · E.58.904' },
+  { x:-102, y:62,   r:4,  name:'DARK FIELD',            color:'#7755AA', glow:'rgba(119,85,170,0.25)',
+    info:'Région sans transmissions.\nAucune sonde n\'en est revenue.',
+    coords:'N.-28.330 · E.-51.660' },
+  { x:22,   y:-108, r:4,  name:'STATION ATLAS',         color:'#88CCFF', glow:'rgba(136,204,255,0.25)',
+    info:'Station de ravitaillement\nen orbite basse. ESC agréée.',
+    coords:'N.44.229 · E.10.115' },
+  { x:-38,  y:-80,  r:4,  name:'RELAY OMEGA',           color:'#6688FF', glow:'rgba(102,136,255,0.25)',
+    info:'Relais communication ESC.\nSignal chiffré niveau 7.',
+    coords:'N.38.550 · E.-19.002' },
+  { x:58,   y:92,   r:3,  name:'COLONY IX',             color:'#AACCFF', glow:'rgba(170,204,255,0.2)',
+    info:'Colonie de peuplement ESC.\n4.2M habitants. Statut: soumis.',
+    coords:'N.-40.180 · E.29.880' },
+  { x:-140, y:-30,  r:3,  name:'VOID OUTPOST',          color:'#554466', glow:'rgba(85,68,102,0.2)',
+    info:'Avant-poste isolé.\nDernier contact : 1402 jours.',
+    coords:'N.14.002 · E.-72.440' },
+  { x:148,  y:-18,  r:3,  name:'CHECKPOINT ZERO',       color:'#668888', glow:'rgba(102,136,136,0.2)',
+    info:'Frontière de l\'espace\ncartographié par l\'ESC.',
+    coords:'N.08.000 · E.78.100' },
+];
+
+// Sector zone labels (shown at lower zoom)
+const SECTORS = [
+  { x:-20,  y:-55,  name:'SECTEUR ESC',    color:'rgba(68,136,255,0.35)' },
+  { x:-95,  y:20,   name:'BRAS EREBUS',    color:'rgba(0,229,255,0.3)' },
+  { x:85,   y:25,   name:'COULOIR NEXUS',  color:'rgba(153,136,255,0.3)' },
+  { x:40,   y:80,   name:'ZONE LIA',       color:'rgba(200,255,0,0.4)' },
+  { x:-90,  y:68,   name:'DARK FIELD',     color:'rgba(119,85,170,0.3)' },
+];
+
+// ── STAR GENERATION ───────────────────────────────────────────────
+function generateStars() {
+  const stars = [];
+  const rand = (min, max) => Math.random()*(max-min)+min;
+
+  // Dense glowing core
+  for (let i = 0; i < 220; i++) {
+    const r = Math.pow(Math.random(), 1.8) * 48;
+    const t = Math.random() * Math.PI * 2;
+    stars.push({
+      x: r * Math.cos(t),
+      y: r * Math.sin(t) * 0.88,
+      r: rand(0.3, 2.2),
+      o: rand(0.4, 1),
+      zone: 'core'
+    });
+  }
+
+  // 5 spiral arms
+  const N_ARMS = 5;
+  for (let arm = 0; arm < N_ARMS; arm++) {
+    const offset = (arm / N_ARMS) * Math.PI * 2;
+    for (let i = 0; i < 160; i++) {
+      const t  = i / 160;
+      const th = t * Math.PI * 3.4 + offset;
+      const rad = 30 + t * 175;
+      const sc  = (Math.random() - 0.5) * rad * 0.28;
+      const sn  = (Math.random() - 0.5) * 10;
+      stars.push({
+        x: (rad + sn) * Math.cos(th) + sc * Math.sin(th),
+        y: ((rad + sn) * Math.sin(th) - sc * Math.cos(th)) * 0.88,
+        r: rand(0.2, 1.5 - t * 0.7),
+        o: (0.9 - t * 0.5) * rand(0.4, 1),
+        zone: arm === 2 ? 'lia' : arm === 0 ? 'esc' : 'normal',
+        t
+      });
+    }
+  }
+
+  // Background scatter
+  for (let i = 0; i < 140; i++) {
+    stars.push({
+      x: rand(-210, 210), y: rand(-190, 190),
+      r: rand(0.1, 0.7), o: rand(0.04, 0.18), zone: 'field'
+    });
+  }
+  return stars;
+}
+
+const STARS = generateStars();
+
+// Star color by zone
+function starColor(s) {
+  switch(s.zone) {
+    case 'core':   return `rgba(200,215,255,${s.o})`;
+    case 'esc':    return `rgba(100,160,255,${s.o})`;
+    case 'lia':    return `rgba(170,255,120,${s.o})`;
+    case 'normal': return `rgba(180,195,255,${s.o})`;
+    default:       return `rgba(140,150,200,${s.o})`;
+  }
+}
+
+// ── D3 RENDER ─────────────────────────────────────────────────────
+const zone   = document.getElementById('galaxy-zone');
+const svgEl  = document.getElementById('galaxy-svg');
+const tip    = document.getElementById('tooltip');
+
+const svg = d3.select('#galaxy-svg');
+const W   = () => zone.clientWidth;
+const H   = () => zone.clientHeight;
+
+// Root group — center of galaxy = center of viewport
+const g = svg.append('g').attr('class','galaxy-root');
+
+// Defs: radial gradients for core glow + system halos
+const defs = svg.append('defs');
+
+// Core glow gradient
+const cg = defs.append('radialGradient').attr('id','core-glow').attr('cx','50%').attr('cy','50%').attr('r','50%');
+cg.append('stop').attr('offset','0%').attr('stop-color','rgba(180,200,255,0.55)');
+cg.append('stop').attr('offset','40%').attr('stop-color','rgba(68,51,238,0.18)');
+cg.append('stop').attr('offset','100%').attr('stop-color','rgba(68,51,238,0)');
+
+// Lia zone glow
+const lg = defs.append('radialGradient').attr('id','lia-glow').attr('cx','50%').attr('cy','50%').attr('r','50%');
+lg.append('stop').attr('offset','0%').attr('stop-color','rgba(200,255,0,0.22)');
+lg.append('stop').attr('offset','100%').attr('stop-color','rgba(200,255,0,0)');
+
+// ── Core glow ellipse ──
+g.append('ellipse')
+  .attr('rx', 55).attr('ry', 48)
+  .attr('fill','url(#core-glow)');
+
+// Lia zone ambient glow
+g.append('ellipse')
+  .attr('cx', 115).attr('cy', 58)
+  .attr('rx', 52).attr('ry', 44)
+  .attr('fill','url(#lia-glow)');
+
+// ── Stars ──
+g.selectAll('circle.star')
+  .data(STARS)
+  .join('circle')
+  .attr('class','star')
+  .attr('cx', d => d.x)
+  .attr('cy', d => d.y)
+  .attr('r',  d => d.r)
+  .attr('fill', d => starColor(d));
+
+// ── Sector labels (faint) ──
+g.selectAll('text.sector')
+  .data(SECTORS)
+  .join('text')
+  .attr('class','sector')
+  .attr('x', d => d.x).attr('y', d => d.y)
+  .attr('text-anchor','middle')
+  .attr('font-family','Courier New, monospace')
+  .attr('font-size', 7)
+  .attr('letter-spacing', 2)
+  .attr('fill', d => d.color)
+  .attr('text-transform','uppercase')
+  .text(d => d.name);
+
+// ── Named systems: halo + circle + label ──
+const sysG = g.selectAll('g.system')
+  .data(SYSTEMS)
+  .join('g')
+  .attr('class','system')
+  .attr('transform', d => `translate(${d.x},${d.y})`)
+  .style('cursor','pointer');
+
+// Outer halo (animated pulse via CSS filter)
+sysG.append('circle')
+  .attr('r', d => d.r * 3.5)
+  .attr('fill', d => d.glow)
+  .attr('class','sys-halo');
+
+// Inner dot
+sysG.append('circle')
+  .attr('r', d => d.r)
+  .attr('fill', d => d.color)
+  .attr('stroke','rgba(255,255,255,0.3)')
+  .attr('stroke-width', 0.5);
+
+// System label
+sysG.append('text')
+  .attr('x', d => d.r + 4)
+  .attr('y', 3)
+  .attr('font-family','Courier New, monospace')
+  .attr('font-size', 6.5)
+  .attr('letter-spacing', 1.5)
+  .attr('fill', d => d.color)
+  .attr('opacity', 0.85)
+  .text(d => d.name);
+
+// Connection lines between key systems (ESC PRIME → others)
+const connections = [
+  [0,1],[0,2],[0,6],[0,5],[1,6],[2,3]
+];
+const sysMap = SYSTEMS.reduce((m,s,i) => ({...m,[i]:s}),{});
+g.selectAll('line.conn')
+  .data(connections)
+  .join('line')
+  .attr('class','conn')
+  .attr('x1',d => sysMap[d[0]].x).attr('y1',d => sysMap[d[0]].y)
+  .attr('x2',d => sysMap[d[1]].x).attr('y2',d => sysMap[d[1]].y)
+  .attr('stroke','rgba(68,136,255,0.12)')
+  .attr('stroke-width',0.5)
+  .attr('stroke-dasharray','2,4');
+
+// ── Tooltip interaction ──
+sysG.on('click touchstart', function(event, d) {
+  event.stopPropagation();
+  const rect = zone.getBoundingClientRect();
+  const ev   = event.touches ? event.touches[0] : event;
+  let tx = ev.clientX - rect.left + 12;
+  let ty = ev.clientY - rect.top  + 12;
+  if (tx + 190 > W()) tx -= 200;
+  if (ty + 100 > H()) ty -= 110;
+
+  tip.style.setProperty('--tip-color', d.color);
+  document.getElementById('tip-name').textContent = d.name;
+  document.getElementById('tip-info').textContent = d.info;
+  document.getElementById('tip-coords').textContent = d.coords;
+  tip.style.display = 'block';
+  tip.style.left = tx + 'px';
+  tip.style.top  = ty + 'px';
+});
+
+// Close tooltip on bg click
+d3.select('#galaxy-zone').on('click', () => { tip.style.display = 'none'; });
+
+// ── Zoom & Pan ──
+const zoom = d3.zoom()
+  .scaleExtent([0.35, 9])
+  .on('zoom', ev => {
+    g.attr('transform', `translate(${W()/2 + ev.transform.x},${H()/2 + ev.transform.y}) scale(${ev.transform.k})`);
+    // Fade sector labels based on zoom level
+    g.selectAll('text.sector').attr('opacity', Math.min(1, ev.transform.k * 0.7));
+    g.selectAll('text').filter(function(){ return this.parentNode.classList?.contains('system'); })
+      .attr('opacity', Math.min(1, ev.transform.k * 0.9));
+  });
+
+svg.call(zoom);
+
+// Initial center
+function centerGalaxy() {
+  g.attr('transform', `translate(${W()/2},${H()/2}) scale(1)`);
+}
+centerGalaxy();
+window.addEventListener('resize', centerGalaxy);
+
+// ── Pulse animation on system halos ──
+function pulseSystems() {
+  g.selectAll('.sys-halo')
+    .transition().duration(2200).ease(d3.easeSinInOut)
+    .attr('r', d => d.r * 5)
+    .attr('opacity', 0.3)
+    .transition().duration(2200).ease(d3.easeSinInOut)
+    .attr('r', d => d.r * 2.8)
+    .attr('opacity', 0.7)
+    .on('end', pulseSystems);
+}
+pulseSystems();
+
+// ── Subtle background star twinkle ──
+function twinkle() {
+  g.selectAll('circle.star')
+    .filter(() => Math.random() < 0.004)
+    .transition().duration(600)
+    .attr('opacity', 0.1)
+    .transition().duration(600)
+    .attr('opacity', null);
+  setTimeout(twinkle, 120);
+}
+twinkle();
+</script>
+</body>
+</html>

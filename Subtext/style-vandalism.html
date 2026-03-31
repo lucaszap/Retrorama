@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VANDALISM</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper: #EEEAE0;
+    --black: #0A0A0A;
+    --red: #D42020;
+  }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--black);
+    font-family: 'Arial Black', 'Arial', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  /* Grain canvas */
+  #grain {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 1;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    margin-bottom: 6px;
+  }
+  .hecker {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--black);
+    opacity: 0.55;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .vandalism {
+    font-size: clamp(62px, 22vw, 88px);
+    font-weight: 900;
+    line-height: 0.85;
+    letter-spacing: -3px;
+    color: var(--black);
+    text-transform: uppercase;
+  }
+  .divider-top { height: 1.5px; background: var(--black); margin: 6px 0; }
+
+  /* Image zone */
+  .image-zone {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    margin-bottom: 8px;
+  }
+  .invsbl {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: var(--black);
+    opacity: 0.4;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-right: 8px;
+    align-self: center;
+  }
+  .image-rect {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    border: 1.5px solid var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .uv-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--red);
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 7px;
+    letter-spacing: 0.12em;
+    padding: 4px 6px;
+    z-index: 3;
+  }
+  .image-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.06;
+  }
+
+  /* Separator */
+  .separator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    z-index: 2;
+  }
+  .sep-dots {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--black);
+    opacity: 0.4;
+  }
+  .sep-bar {
+    height: 2px;
+    background: var(--red);
+    width: 0;
+    animation: barexpand 2s ease forwards 0.5s;
+  }
+  @keyframes barexpand { to { width: 60px; } }
+
+  /* Two-column section */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    z-index: 2;
+    margin-bottom: 8px;
+  }
+  .col-title {
+    font-family: 'Courier New', monospace;
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--black);
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--black);
+    padding-bottom: 2px;
+  }
+  .col-body {
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    line-height: 1.5;
+    color: var(--black);
+    opacity: 0.7;
+  }
+
+  /* Bottom */
+  .bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 2;
+  }
+  .logo-text {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--black);
+  }
+  .year {
+    font-size: 9px;
+    opacity: 0.5;
+    font-family: 'Courier New', monospace;
+    margin-top: 2px;
+  }
+  .footer-credit {
+    font-family: 'Courier New', monospace;
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--black);
+    opacity: 0.35;
+    margin-top: 6px;
+    text-align: center;
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+<canvas id="grain"></canvas>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="hecker">H&#x0415;CKER</div>
+    <div class="vandalism">VANDALISM</div>
+  </div>
+  <div class="divider-top"></div>
+
+  <!-- Image zone -->
+  <div class="image-zone">
+    <div class="invsbl">INVSBL.</div>
+    <div class="image-rect">
+      <div class="uv-badge">UV-REACTIVE INKS</div>
+      <!-- Urban object SVG: lamppost silhouette -->
+      <svg width="80" height="140" viewBox="0 0 80 140" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative;z-index:1;">
+        <!-- Target circles -->
+        <circle cx="40" cy="70" r="38" stroke="#0A0A0A" stroke-width="1.2"/>
+        <circle cx="40" cy="70" r="24" stroke="#0A0A0A" stroke-width="0.8" opacity="0.5"/>
+        <circle cx="40" cy="70" r="10" stroke="#0A0A0A" stroke-width="0.8" opacity="0.4"/>
+        <!-- Lamppost body -->
+        <rect x="37" y="30" width="6" height="80" fill="#0A0A0A"/>
+        <!-- Arm -->
+        <rect x="30" y="30" width="18" height="5" rx="2" fill="#0A0A0A"/>
+        <!-- Light head -->
+        <rect x="18" y="22" width="12" height="10" rx="1" fill="#0A0A0A"/>
+        <!-- Base -->
+        <rect x="30" y="108" width="20" height="8" fill="#0A0A0A"/>
+        <rect x="26" y="114" width="28" height="5" fill="#0A0A0A"/>
+      </svg>
+      <!-- Inner grain canvas -->
+      <canvas class="image-canvas" id="imgGrain"></canvas>
+    </div>
+  </div>
+
+  <!-- Separator -->
+  <div class="separator">
+    <span class="sep-dots">· · · · ·</span>
+    <div class="sep-bar"></div>
+  </div>
+
+  <!-- Two columns -->
+  <div class="two-col">
+    <div>
+      <div class="col-title">Unseen Art</div>
+      <div class="col-body">
+        Marks left in shadow,<br>
+        edges burned into<br>
+        surfaces no one<br>
+        was meant to see.
+      </div>
+    </div>
+    <div>
+      <div class="col-title">Innovation in Vandalism</div>
+      <div class="col-body">
+        UV ink, thermal<br>
+        paste, acid etch —<br>
+        the city becomes<br>
+        the medium.
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottom">
+    <div>
+      <div class="logo-text">UNSEEN Arts</div>
+      <div class="year">1970</div>
+    </div>
+    <svg width="72" height="28" viewBox="0 0 72 28">
+      <polygon points="14,2 26,2 32,13 26,24 14,24 8,13" fill="none" stroke="#0A0A0A" stroke-width="1.2" opacity="0.5"/>
+      <polygon points="42,2 54,2 60,13 54,24 42,24 36,13" fill="none" stroke="#0A0A0A" stroke-width="1.2" opacity="0.5"/>
+      <polygon points="58,6 66,6 70,13 66,20 58,20 54,13" fill="none" stroke="#0A0A0A" stroke-width="1.2" opacity="0.25"/>
+    </svg>
+  </div>
+
+  <div class="footer-credit">UNSEEN ARTS COLLECTIVE · PRINT EDITION 03 · RISOGRAPH · UNAUTHORIZED</div>
+</div>
+
+<script>
+  // Heavy grain on main canvas
+  const grain = document.getElementById('grain');
+  const ctx = grain.getContext('2d');
+  function resizeGrain() {
+    grain.width = window.innerWidth;
+    grain.height = window.innerHeight;
+  }
+  resizeGrain();
+  window.addEventListener('resize', resizeGrain);
+
+  function renderGrain() {
+    const w = grain.width, h = grain.height;
+    const img = ctx.createImageData(w, h);
+    const data = img.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const v = Math.random() < 0.4 ? Math.floor(Math.random() * 30) : 0;
+      data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+      data[i+3] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  renderGrain();
+  setInterval(renderGrain, 100);
+
+  // Inner image grain
+  const ig = document.getElementById('imgGrain');
+  const ictx = ig.getContext('2d');
+  function resizeIG() {
+    ig.width = ig.parentElement.offsetWidth;
+    ig.height = ig.parentElement.offsetHeight;
+  }
+  resizeIG();
+  function renderIG() {
+    const w = ig.width, h = ig.height;
+    const img = ictx.createImageData(w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.random() < 0.5 ? Math.floor(Math.random() * 60) : 0;
+      d[i] = 0; d[i+1] = 0; d[i+2] = 0; d[i+3] = v;
+    }
+    ictx.putImageData(img, 0, 0);
+  }
+  renderIG();
+  setInterval(renderIG, 100);
+</script>
+</body>
+</html>

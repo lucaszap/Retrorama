@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SLAYER — Vue Cockpit</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#060810;font-family:'Courier New',monospace}
+
+#space{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+
+/* ── SIDE PANELS ── */
+.side-l,.side-r{position:fixed;top:0;bottom:0;width:22px;background:#080A12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:50px 0;z-index:15}
+.side-l{left:0;border-right:1px solid rgba(0,229,255,0.12)}
+.side-r{right:0;border-left:1px solid rgba(0,229,255,0.12)}
+.led{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.led.g{background:#00FF41;box-shadow:0 0 5px #00FF41}
+.led.a{background:#FFB830;box-shadow:0 0 5px #FFB830;animation:pled 2.4s ease-in-out infinite}
+.led.r{background:#FF4422;box-shadow:0 0 5px #FF4422;animation:pled 1.1s ease-in-out infinite}
+.led.b{background:#4488FF;box-shadow:0 0 5px #4488FF}
+.led.o{background:rgba(255,255,255,0.07)}
+@keyframes pled{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* ── TOP HUD ── */
+#hud-top{position:fixed;top:0;left:22px;right:22px;height:44px;background:rgba(6,8,16,0.9);border-bottom:0.5px solid rgba(0,229,255,0.18);display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:14}
+.ht-col{display:flex;flex-direction:column;gap:2px}
+.ht-col.c{align-items:center}
+.ht-col.r{align-items:flex-end}
+.ht-lbl{font-size:5.5px;letter-spacing:2px;color:rgba(0,229,255,0.3);text-transform:uppercase}
+.ht-val{font-size:10px;letter-spacing:0.5px;color:rgba(0,229,255,0.9);line-height:1}
+.blink{animation:blnk 1s step-end infinite}
+@keyframes blnk{50%{opacity:0}}
+
+/* ── VIEWPORT ── */
+#viewport{position:fixed;top:44px;left:22px;right:22px;bottom:calc(145px + env(safe-area-inset-bottom,0px));z-index:11;overflow:hidden;box-shadow:inset 0 0 50px rgba(0,0,0,0.55)}
+
+.vcorner{position:absolute;width:16px;height:16px}
+.vcorner.tl{top:8px;left:8px;border-top:1px solid rgba(0,229,255,0.3);border-left:1px solid rgba(0,229,255,0.3)}
+.vcorner.tr{top:8px;right:8px;border-top:1px solid rgba(0,229,255,0.3);border-right:1px solid rgba(0,229,255,0.3)}
+.vcorner.bl{bottom:8px;left:8px;border-bottom:1px solid rgba(0,229,255,0.3);border-left:1px solid rgba(0,229,255,0.3)}
+.vcorner.br{bottom:8px;right:8px;border-bottom:1px solid rgba(0,229,255,0.3);border-right:1px solid rgba(0,229,255,0.3)}
+
+/* center reticle */
+#reticle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;width:0;height:0}
+#reticle::before{content:'';position:absolute;width:54px;height:0.5px;top:0;left:-27px;background:rgba(0,229,255,0.18)}
+#reticle::after{content:'';position:absolute;height:54px;width:0.5px;left:0;top:-27px;background:rgba(0,229,255,0.18)}
+.rring{width:18px;height:18px;border:0.5px solid rgba(0,229,255,0.28);border-radius:50%;position:absolute;top:-9px;left:-9px}
+
+/* ── ADVENTURE MARKERS ── */
+.adv{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;display:none;z-index:12}
+.adv.on{display:block}
+
+.adv-pip{width:9px;height:9px;border-radius:50%;position:relative;flex-shrink:0}
+.adv-pip::before{content:'';position:absolute;inset:-5px;border-radius:50%;border:0.5px solid currentColor;animation:ap 2s ease-in-out infinite}
+.adv-pip::after{content:'';position:absolute;inset:-11px;border-radius:50%;border:0.5px solid currentColor;animation:ap 2s ease-in-out infinite 0.7s;opacity:0.35}
+@keyframes ap{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.5);opacity:0}}
+
+.adv-tag{position:absolute;left:14px;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:6.5px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border:0.5px solid currentColor;background:rgba(6,8,16,0.88);line-height:1.5}
+.adv-tag.left{left:auto;right:14px}
+.adv-sub{font-size:5.5px;opacity:0.5;display:block;letter-spacing:1px;margin-top:1px}
+
+/* Marker types */
+.adv.wp .adv-pip{background:#4488FF;color:#4488FF;box-shadow:0 0 8px rgba(68,136,255,0.5)}
+.adv.wp .adv-tag{color:#4488FF}
+.adv.sig .adv-pip{background:#C8FF00;color:#C8FF00;box-shadow:0 0 8px rgba(200,255,0,0.5)}
+.adv.sig .adv-tag{color:#C8FF00}
+.adv.thr .adv-pip{background:#FF4422;color:#FF4422;box-shadow:0 0 8px rgba(255,68,34,0.5)}
+.adv.thr .adv-tag{color:#FF4422}
+.adv.msg .adv-pip{background:#FFB830;color:#FFB830;box-shadow:0 0 8px rgba(255,184,48,0.5)}
+.adv.msg .adv-tag{color:#FFB830}
+
+/* ── DASHBOARD ── */
+#dash{position:fixed;bottom:0;left:0;right:0;height:calc(145px + env(safe-area-inset-bottom,0px));background:#080A12;border-top:1.5px solid rgba(0,229,255,0.22);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:14}
+
+.ds{flex:1;padding:10px 12px;border-right:0.5px solid rgba(0,229,255,0.1);display:flex;flex-direction:column}
+.ds:last-child{border-right:none}
+.ds.mid{flex:1.1;align-items:center;border-right:0.5px solid rgba(0,229,255,0.1)}
+.ds-lbl{font-size:5.5px;letter-spacing:2px;color:rgba(0,229,255,0.28);text-transform:uppercase;margin-bottom:4px}
+.ds-big{font-size:21px;letter-spacing:-0.5px;color:#00E5FF;line-height:1;display:flex;align-items:flex-end;gap:3px}
+.ds-unit{font-size:6px;color:rgba(0,229,255,0.32);letter-spacing:1px;margin-bottom:2px}
+
+.arc-svg{width:68px;height:36px;margin:4px 0 3px;flex-shrink:0}
+
+.ds-note{font-size:5.5px;color:rgba(0,229,255,0.2);letter-spacing:0.5px;margin-top:auto}
+
+/* status rows */
+.ds-rows{display:flex;flex-direction:column;gap:3px;margin-top:2px}
+.ds-row{display:flex;justify-content:space-between;font-size:6.5px;letter-spacing:0.3px}
+.dk{color:rgba(255,255,255,0.22)}
+.dv.ok{color:#00FF41}
+.dv.wn{color:#FFB830;animation:pled 2s ease-in-out infinite}
+.dv.al{color:#FF4422;animation:pled 1s ease-in-out infinite}
+.dv.of{color:rgba(255,255,255,0.1)}
+
+/* Compass */
+.compass{width:52px;height:52px;border-radius:50%;border:1px solid rgba(0,229,255,0.18);position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.compass::before{content:'N';font-size:5.5px;color:rgba(255,68,34,0.9);position:absolute;top:3px;left:50%;transform:translateX(-50%)}
+.compass::after{content:'S';font-size:5.5px;color:rgba(0,229,255,0.25);position:absolute;bottom:3px;left:50%;transform:translateX(-50%)}
+.cneedle{position:absolute;width:2px;height:34px;top:9px;left:calc(50% - 1px);transform-origin:50% 100%;background:linear-gradient(to bottom,#FF4422 50%,rgba(0,229,255,0.35) 50%);border-radius:1px 1px 0 0}
+.cval{font-size:7px;color:rgba(0,229,255,0.45);letter-spacing:1px;position:absolute}
+.ds-coord{font-size:5.5px;color:rgba(0,229,255,0.18);letter-spacing:1px;margin-top:5px;text-align:center}
+</style>
+</head>
+<body>
+
+<canvas id="space"></canvas>
+
+<!-- Side panels -->
+<div class="side-l">
+  <div class="led g"></div>
+  <div class="led g"></div>
+  <div class="led a"></div>
+  <div class="led b"></div>
+  <div class="led o"></div>
+  <div class="led o"></div>
+</div>
+<div class="side-r">
+  <div class="led g"></div>
+  <div class="led o"></div>
+  <div class="led r"></div>
+  <div class="led a"></div>
+  <div class="led b"></div>
+  <div class="led o"></div>
+</div>
+
+<!-- Top HUD -->
+<div id="hud-top">
+  <div class="ht-col">
+    <div class="ht-lbl">Cap</div>
+    <div class="ht-val" id="hud-cap">227°</div>
+  </div>
+  <div class="ht-col c">
+    <div class="ht-lbl">Secteur</div>
+    <div class="ht-val">OMEGA-7 <span class="blink" style="color:#00FF41;font-size:7px">■</span></div>
+  </div>
+  <div class="ht-col r">
+    <div class="ht-lbl">Distance</div>
+    <div class="ht-val">4.2 AU</div>
+  </div>
+</div>
+
+<!-- Viewport -->
+<div id="viewport">
+  <div class="vcorner tl"></div>
+  <div class="vcorner tr"></div>
+  <div class="vcorner bl"></div>
+  <div class="vcorner br"></div>
+  <div id="reticle"><div class="rring"></div></div>
+
+  <!-- Adventure markers — contrôlés par showMarker(id) / hideMarker(id) -->
+  <div class="adv wp on" id="adv-erebus" style="left:54%;top:42%">
+    <div class="adv-pip"></div>
+    <div class="adv-tag">EREBUS-7<span class="adv-sub">1.4 AU · CAP 044°</span></div>
+  </div>
+
+  <div class="adv sig on" id="adv-lia" style="left:26%;top:56%">
+    <div class="adv-pip"></div>
+    <div class="adv-tag">SIGNAL LIA<span class="adv-sub">ZONE INCONNUE</span></div>
+  </div>
+
+  <div class="adv thr" id="adv-esc" style="left:74%;top:64%">
+    <div class="adv-pip"></div>
+    <div class="adv-tag left">PATROUILLE ESC<span class="adv-sub">APPROCHE RAPIDE</span></div>
+  </div>
+
+  <div class="adv msg" id="adv-comm" style="left:46%;top:22%">
+    <div class="adv-pip"></div>
+    <div class="adv-tag">TRANSMISSION<span class="adv-sub">CHIFFRÉE · FREQ 7</span></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dash">
+
+  <!-- Vitesse -->
+  <div class="ds">
+    <div class="ds-lbl">Vitesse</div>
+    <div class="ds-big"><span id="spd-num">847</span><span class="ds-unit">km/s</span></div>
+    <!-- Arc gauge: semicircle r=28, cx=34, cy=34 → M6,34 A28,28 0 0,1 62,34 — arc len ≈ 88 -->
+    <svg class="arc-svg" viewBox="0 0 68 36">
+      <path d="M5,34 A29,29 0 0,1 63,34" fill="none" stroke="rgba(0,229,255,0.1)" stroke-width="3.5" stroke-linecap="round"/>
+      <path id="spd-arc" d="M5,34 A29,29 0 0,1 63,34" fill="none" stroke="#00E5FF" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="91" stroke-dashoffset="25"/>
+      <circle id="spd-dot" cx="34" cy="5" r="2.8" fill="#00E5FF"/>
+    </svg>
+    <div class="ds-note">PROPULSION OK</div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="ds mid">
+    <div class="ds-lbl">Navigation</div>
+    <div class="compass">
+      <div class="cneedle" id="cneedle"></div>
+      <div class="cval" id="cval">227°</div>
+    </div>
+    <div class="ds-coord">N.48.2 · E.2.35</div>
+  </div>
+
+  <!-- Systèmes -->
+  <div class="ds">
+    <div class="ds-lbl">Systèmes</div>
+    <div class="ds-rows">
+      <div class="ds-row"><span class="dk">BOUCLIER</span><span class="dv ok">ACTIF</span></div>
+      <div class="ds-row"><span class="dk">COMM</span><span class="dv wn">·INTERF</span></div>
+      <div class="ds-row"><span class="dk">IA CORE</span><span class="dv al">ALERTE</span></div>
+      <div class="ds-row"><span class="dk">CARBU</span><span class="dv ok">82%</span></div>
+      <div class="ds-row"><span class="dk">ARMES</span><span class="dv of">OFF</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── SPACE CANVAS ──────────────────────────────────────────────
+const cv = document.getElementById('space');
+const ctx = cv.getContext('2d');
+let W, H, stars = [], frame = 0;
+
+function initStars() {
+  stars = [];
+  const n = Math.floor(W * H / 1100);
+  for (let i = 0; i < n; i++) {
+    const big = Math.random() > 0.9;
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: big ? Math.random() * 1.4 + 0.8 : Math.random() * 0.6 + 0.15,
+      phase: Math.random() * Math.PI * 2,
+      spd: Math.random() * 0.014 + 0.004,
+      warm: Math.random() > 0.9,
+      cool: !big && Math.random() > 0.88,
+    });
+  }
+}
+
+function resize() {
+  W = cv.width = window.innerWidth;
+  H = cv.height = window.innerHeight;
+  initStars();
+}
+resize();
+window.addEventListener('resize', resize);
+
+function drawSpace() {
+  frame++;
+  ctx.clearRect(0, 0, W, H);
+
+  // Nebula glow 1
+  const n1 = ctx.createRadialGradient(W*.38, H*.35, 10, W*.38, H*.35, W*.55);
+  n1.addColorStop(0, 'rgba(45,15,90,.22)');
+  n1.addColorStop(.5, 'rgba(10,18,45,.12)');
+  n1.addColorStop(1, 'transparent');
+  ctx.fillStyle = n1; ctx.fillRect(0, 0, W, H);
+
+  // Nebula glow 2
+  const n2 = ctx.createRadialGradient(W*.72, H*.6, 5, W*.72, H*.6, W*.38);
+  n2.addColorStop(0, 'rgba(0,30,70,.18)');
+  n2.addColorStop(1, 'transparent');
+  ctx.fillStyle = n2; ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (const s of stars) {
+    const b = 0.5 + 0.5 * Math.sin(frame * s.spd + s.phase);
+    ctx.globalAlpha = b * (s.r > 1 ? 0.95 : 0.75);
+    ctx.fillStyle = s.warm ? '#FFD8A8' : s.cool ? '#B0C8FF' : '#F0EDE8';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Planet (lower-left, partially clipped)
+  const px = W * .12, py = H * .74, pr = 54;
+  const pg = ctx.createRadialGradient(px - pr*.28, py - pr*.28, pr*.06, px, py, pr);
+  pg.addColorStop(0, '#4E70AA');
+  pg.addColorStop(.4, '#1C3868');
+  pg.addColorStop(.82, '#0C1D3A');
+  pg.addColorStop(1, '#060810');
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
+  ctx.fillStyle = pg; ctx.fill();
+
+  // Cloud bands
+  ctx.save();
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.clip();
+  for (let b = 0; b < 5; b++) {
+    ctx.beginPath();
+    ctx.ellipse(px, py - pr*.42 + b * pr*.22, pr*.92, pr*.07, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(80,140,220,.07)'; ctx.fill();
+  }
+  ctx.restore();
+
+  // Atmosphere halo
+  const ha = ctx.createRadialGradient(px, py, pr*.88, px, py, pr*1.42);
+  ha.addColorStop(0, 'rgba(55,95,210,.14)');
+  ha.addColorStop(1, 'transparent');
+  ctx.beginPath(); ctx.arc(px, py, pr * 1.42, 0, Math.PI * 2);
+  ctx.fillStyle = ha; ctx.fill();
+
+  // Distant star glow top-right
+  const sg = ctx.createRadialGradient(W*.9, H*.09, 2, W*.9, H*.09, W*.22);
+  sg.addColorStop(0, 'rgba(210,225,255,.22)');
+  sg.addColorStop(.35, 'rgba(170,185,255,.08)');
+  sg.addColorStop(1, 'transparent');
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(drawSpace);
+}
+requestAnimationFrame(drawSpace);
+
+// ── COMPASS ──────────────────────────────────────────────────
+let cap = 227;
+const cneedle = document.getElementById('cneedle');
+const hudCap = document.getElementById('hud-cap');
+const cval = document.getElementById('cval');
+
+(function tickCompass() {
+  cap += (Math.random() - 0.5) * 0.35;
+  const display = ((Math.round(cap) % 360) + 360) % 360;
+  cneedle.style.transform = 'rotate(' + cap + 'deg)';
+  hudCap.textContent = display + '°';
+  cval.textContent = display + '°';
+  setTimeout(tickCompass, 110);
+})();
+
+// ── SPEED ARC ─────────────────────────────────────────────────
+// Arc: M5,34 A29,29 0 0,1 63,34 — center (34,34), r=29
+// Arc length ≈ π * 29 ≈ 91
+let spd = 847;
+const spdNum = document.getElementById('spd-num');
+const spdArc = document.getElementById('spd-arc');
+const spdDot = document.getElementById('spd-dot');
+const ARC_LEN = 91, SPD_MIN = 650, SPD_MAX = 1050;
+
+(function tickSpd() {
+  spd += (Math.random() - 0.5) * 12;
+  spd = Math.max(SPD_MIN, Math.min(SPD_MAX, spd));
+  const pct = (spd - SPD_MIN) / (SPD_MAX - SPD_MIN);
+  spdNum.textContent = Math.round(spd);
+  spdArc.setAttribute('stroke-dashoffset', ARC_LEN * (1 - pct));
+  // Dot along arc: center (34,34), r=29
+  // angle 0 → (5,34) left; angle π → (63,34) right
+  const angle = Math.PI * pct;
+  const dx = 34 - 29 * Math.cos(angle);
+  const dy = 34 - 29 * Math.sin(angle);
+  spdDot.setAttribute('cx', dx);
+  spdDot.setAttribute('cy', dy);
+  setTimeout(tickSpd, 200);
+})();
+
+// ── ADVENTURE MARKER API ──────────────────────────────────────
+// Appelé depuis le jeu pour afficher/cacher les marqueurs
+function showMarker(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('on');
+}
+function hideMarker(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('on');
+}
+// IDs disponibles : adv-erebus (waypoint), adv-lia (signal), adv-esc (menace), adv-comm (message)
+// Exemple : showMarker('adv-esc') — hideMarker('adv-lia')
+</script>
+</body>
+</html>

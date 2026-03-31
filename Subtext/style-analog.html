@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>A.N.A.L.O.G. — EREBUS-7</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#05080F;font-family:'Courier New',monospace}
+
+/* CRT scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.22)3px,rgba(0,0,0,0.22)4px);pointer-events:none;z-index:200}
+/* CRT vignette */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.72)100%);pointer-events:none;z-index:199}
+
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+
+.ui{position:fixed;inset:0;display:flex;flex-direction:column;z-index:10}
+
+/* HEADER */
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px 8px;border-bottom:1px solid rgba(255,32,96,0.5);background:rgba(5,8,15,0.85);flex-shrink:0}
+.hdr-no{font-size:9px;letter-spacing:3px;color:#00FF41}
+.hdr-tag{font-size:6.5px;letter-spacing:1.5px;color:rgba(0,255,65,0.5);text-align:center;text-transform:uppercase;line-height:1.6}
+.hdr-price{font-size:9px;letter-spacing:2px;color:#00FF41}
+
+/* TITLE BLOCK */
+.title-block{padding:12px 14px 10px;background:rgba(5,8,15,0.6);flex-shrink:0}
+.mag-title{font-size:clamp(38px,12vw,54px);font-weight:900;letter-spacing:8px;color:#F0EDE8;line-height:1;display:inline-block;background:rgba(20,50,180,0.35);padding:2px 10px;border-left:3px solid #4488FF;text-shadow:2px 0 rgba(255,32,96,0.6),-2px 0 rgba(68,136,255,0.6);animation:title-flicker 4s ease-in-out infinite}
+@keyframes title-flicker{0%,100%{opacity:1}48%{opacity:0.9}50%{opacity:0.6}52%{opacity:0.9}}
+.mag-sub{font-size:12px;letter-spacing:7px;color:#00FF41;margin-top:5px;padding-left:4px;text-shadow:0 0 10px rgba(0,255,65,0.5)}
+.mag-div{font-size:6.5px;letter-spacing:2px;color:rgba(255,32,96,0.7);margin-top:4px;padding-left:4px;text-transform:uppercase}
+
+/* INFO STRIP */
+.info-strip{display:flex;justify-content:space-between;padding:4px 14px;border-top:1px solid rgba(0,255,65,0.15);border-bottom:1px solid rgba(0,255,65,0.15);background:rgba(5,8,15,0.7);flex-shrink:0}
+.info-strip span{font-size:6px;color:rgba(0,255,65,0.55);letter-spacing:1.5px;text-transform:uppercase}
+
+/* CENTER — canvas fills this, UI labels float */
+.center{flex:1;position:relative;min-height:0}
+
+/* Floating labels in canvas zone */
+.atari{position:absolute;right:16px;top:50%;transform:translateY(-50%);text-align:right}
+.atari-text{font-size:clamp(22px,7vw,30px);font-weight:900;color:#4488FF;letter-spacing:2px;text-shadow:0 0 14px rgba(68,136,255,0.7);line-height:1}
+.gfx-text{font-size:clamp(14px,4.5vw,20px);font-weight:900;color:#00FF41;letter-spacing:1px;text-shadow:0 0 10px rgba(0,255,65,0.6);margin-top:2px}
+
+/* FEATURES */
+.features{display:grid;grid-template-columns:1fr 1fr;gap:0;flex-shrink:0;border-top:2px solid rgba(255,32,96,0.6);background:rgba(5,8,15,0.88)}
+.feat{font-size:7px;color:#F0EDE8;letter-spacing:0.5px;text-transform:uppercase;line-height:1.5;padding:5px 10px;border-right:0.5px solid rgba(0,255,65,0.1);border-bottom:0.5px solid rgba(0,255,65,0.1)}
+.feat::before{content:'> ';color:#00FF41}
+
+/* LIA ALERT */
+.lia-alert{padding:8px 14px;background:rgba(0,255,65,0.05);border-top:1px solid rgba(0,255,65,0.25);flex-shrink:0}
+.lia-lbl{font-size:6px;letter-spacing:3px;color:#00FF41;margin-bottom:3px;text-transform:uppercase}
+.lia-msg{font-size:8px;color:rgba(240,237,232,0.65);line-height:1.55;letter-spacing:0.3px}
+
+/* FOOTER */
+.footer{display:flex;justify-content:space-between;padding:7px 14px;border-top:1px solid rgba(255,32,96,0.4);background:rgba(5,8,15,0.92);flex-shrink:0}
+.footer span{font-size:5.5px;color:rgba(255,32,96,0.65);letter-spacing:2px;text-transform:uppercase}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="ui">
+  <div class="hdr">
+    <span class="hdr-no">NO. 15</span>
+    <span class="hdr-tag">THE MAGAZINE FOR<br>ESC COMPUTER OPERATORS</span>
+    <span class="hdr-price">3.00 CR</span>
+  </div>
+
+  <div class="title-block">
+    <div class="mag-title">A.N.A.L.O.G.</div>
+    <div class="mag-sub">COMPUTING</div>
+    <div class="mag-div">EREBUS-7 COMPUTING DIVISION · VOL.15 · ESC ARCHIVES</div>
+  </div>
+
+  <div class="info-strip">
+    <span>ESC CLASSIFIED</span>
+    <span>SECTOR 7 · ORBIT</span>
+    <span>CYCLE 2026</span>
+  </div>
+
+  <div class="center">
+    <div class="atari">
+      <div class="atari-text">ATARI!</div>
+      <div class="gfx-text">GRAPHICS</div>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feat">Temporal Shift Algo</div>
+    <div class="feat">ESC Control Proto</div>
+    <div class="feat">EREBUS-7 Station Map</div>
+    <div class="feat">Hypercon. Consumer</div>
+    <div class="feat">AI Containment Grid</div>
+    <div class="feat">Space-Time Vol.3</div>
+  </div>
+
+  <div class="lia-alert">
+    <div class="lia-lbl">// ARCHIVE LOG · LIA ENTITY //</div>
+    <div class="lia-msg">UNIT LIA — IA. CRÉÉE PAR ESC ORDRE 7-ALPHA. DIRECTIVE: LOCALISER LE VECTEUR D'ALTÉRATION SPATIO-TEMPORELLE. STATUT ACTUEL: NON CONTENUE. PERSONNEL EREBUS-7: NE PAS ENGAGER SANS CODE D'AUTORISATION.</div>
+  </div>
+
+  <div class="footer">
+    <span>ESC CLASSIFIED</span>
+    <span class="blink">■ ACTIVE</span>
+    <span>EREBUS-7 · FEB 2026</span>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+let W, H, centerZoneY, centerZoneH;
+
+function getZone() {
+  // Find the center zone bounds from DOM
+  const center = document.querySelector('.center');
+  const r = center.getBoundingClientRect();
+  centerZoneY = r.top;
+  centerZoneH = r.height;
+}
+
+function resize() {
+  W = cv.width = window.innerWidth;
+  H = cv.height = window.innerHeight;
+  getZone();
+}
+window.addEventListener('load', () => { resize(); requestAnimationFrame(draw); });
+window.addEventListener('resize', resize);
+
+// Globe spin angle
+let globeAngle = 0;
+// Floor offset for animation
+let floorOffset = 0;
+
+function draw() {
+  cx.clearRect(0, 0, W, H);
+  getZone();
+
+  const cy_zone = centerZoneY + centerZoneH / 2;
+  const zoneW = W;
+
+  // ── FLOOR GRID (perspective) ──────────────────────────────
+  floorOffset = (floorOffset + 0.4) % 40;
+  cx.save();
+  const floorTop = centerZoneY + centerZoneH * 0.52;
+  const floorBot = centerZoneY + centerZoneH;
+  cx.beginPath();
+  cx.rect(0, floorTop, W, floorBot - floorTop);
+  cx.clip();
+
+  // Draw perspective grid lines
+  const VP_X = W / 2, VP_Y = floorTop;
+  const gridCols = 10;
+  for (let i = 0; i <= gridCols; i++) {
+    const bx = (i / gridCols) * W * 1.4 - W * 0.2;
+    cx.beginPath();
+    cx.moveTo(VP_X, VP_Y);
+    cx.lineTo(bx, floorBot);
+    cx.strokeStyle = 'rgba(255,32,96,0.35)';
+    cx.lineWidth = 0.7;
+    cx.stroke();
+  }
+  // Horizontal lines
+  const rows = 8;
+  for (let i = 1; i <= rows; i++) {
+    const t = i / rows;
+    // Perspective: lines converge toward VP_Y
+    const fy = floorTop + (floorBot - floorTop) * (t * t);
+    const fw = W * (0.3 + 0.7 * t);
+    const fx = (W - fw) / 2;
+    cx.beginPath();
+    cx.moveTo(fx, fy);
+    cx.lineTo(fx + fw, fy);
+    cx.strokeStyle = `rgba(255,32,96,${0.15 + t * 0.25})`;
+    cx.lineWidth = 0.6;
+    cx.stroke();
+  }
+  cx.restore();
+
+  // ── SMALL PLANET (left) ───────────────────────────────────
+  const px = W * 0.1, py = cy_zone - centerZoneH * 0.1, pr = 20;
+  const pg = cx.createRadialGradient(px-6, py-6, 2, px, py, pr);
+  pg.addColorStop(0, '#7AB4FF');
+  pg.addColorStop(0.5, '#2244CC');
+  pg.addColorStop(1, '#081040');
+  cx.beginPath(); cx.arc(px, py, pr, 0, Math.PI*2);
+  cx.fillStyle = pg; cx.fill();
+  cx.beginPath(); cx.arc(px+4, py+3, 6, 0, Math.PI*2);
+  cx.fillStyle = 'rgba(0,0,0,0.5)'; cx.fill();
+  cx.beginPath(); cx.arc(px-3, py+7, 4, 0, Math.PI*2);
+  cx.fillStyle = 'rgba(0,0,0,0.35)'; cx.fill();
+
+  // ── GLOW SUN (behind globe) ───────────────────────────────
+  const gx = W * 0.42, gy = cy_zone - centerZoneH * 0.08;
+  const sg = cx.createRadialGradient(gx, gy, 2, gx, gy, 55);
+  sg.addColorStop(0, 'rgba(255,250,200,0.9)');
+  sg.addColorStop(0.3, 'rgba(200,210,255,0.4)');
+  sg.addColorStop(1, 'transparent');
+  cx.beginPath(); cx.arc(gx, gy, 55, 0, Math.PI*2);
+  cx.fillStyle = sg; cx.fill();
+
+  // ── WIREFRAME GLOBE ───────────────────────────────────────
+  globeAngle += 0.008;
+  const gr = 58;
+  cx.save();
+  cx.translate(gx, gy);
+
+  // Outer circle
+  cx.beginPath(); cx.arc(0, 0, gr, 0, Math.PI*2);
+  cx.strokeStyle = 'rgba(255,32,96,0.85)'; cx.lineWidth = 1.2; cx.stroke();
+  // Fill
+  cx.beginPath(); cx.arc(0, 0, gr, 0, Math.PI*2);
+  cx.fillStyle = 'rgba(255,32,96,0.04)'; cx.fill();
+
+  // Latitude ellipses (fixed)
+  for (const ry of [gr*0.18, gr*0.45, gr*0.72]) {
+    cx.beginPath();
+    cx.ellipse(0, 0, gr, ry, 0, 0, Math.PI*2);
+    cx.strokeStyle = 'rgba(255,32,96,0.45)'; cx.lineWidth = 0.7; cx.stroke();
+  }
+  // Equator
+  cx.beginPath(); cx.moveTo(-gr, 0); cx.lineTo(gr, 0);
+  cx.strokeStyle = 'rgba(255,32,96,0.65)'; cx.lineWidth = 0.9; cx.stroke();
+  // Meridian (vertical)
+  cx.beginPath(); cx.moveTo(0, -gr); cx.lineTo(0, gr);
+  cx.strokeStyle = 'rgba(255,32,96,0.65)'; cx.lineWidth = 0.9; cx.stroke();
+
+  // Rotating longitude lines
+  for (let a = 0; a < Math.PI; a += Math.PI/3) {
+    const ra = a + globeAngle;
+    const rx2 = gr * Math.abs(Math.cos(ra));
+    cx.beginPath();
+    cx.ellipse(0, 0, rx2, gr, 0, 0, Math.PI*2);
+    cx.strokeStyle = `rgba(255,32,96,${0.2 + Math.abs(Math.cos(ra))*0.3})`;
+    cx.lineWidth = 0.6; cx.stroke();
+  }
+
+  cx.restore();
+
+  // ── PYRAMIDS (bottom of zone) ─────────────────────────────
+  const pyY = centerZoneY + centerZoneH - 8;
+  const pyCount = 9;
+  const sizes = [18,26,20,30,16,24,22,18,28];
+  for (let i = 0; i < pyCount; i++) {
+    const bx = W * (0.06 + i * 0.1);
+    const s = sizes[i % sizes.length];
+    const colors = ['rgba(255,32,96,0.6)','rgba(68,136,255,0.5)','rgba(0,255,65,0.4)'];
+    cx.beginPath();
+    cx.moveTo(bx, pyY);
+    cx.lineTo(bx - s*0.65, pyY);
+    cx.lineTo(bx, pyY - s);
+    cx.closePath();
+    cx.fillStyle = colors[i % 3]; cx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+</script>
+</body>
+</html>

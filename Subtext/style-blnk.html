@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BLNK®</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #D4C9B0;
+    --black: #0A0A0A;
+    --orange: #FF4000;
+  }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--cream);
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  }
+
+  /* Noise overlay sur body */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 200;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    opacity: 0.6;
+  }
+
+  .layout {
+    position: relative; width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    height: 32px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; flex-shrink: 0;
+    border-bottom: 0.5px solid rgba(10,10,10,0.15);
+  }
+  .top-icon { display: flex; align-items: center; }
+  .top-right-text {
+    font-size: 8px; font-family: 'Courier New', monospace;
+    color: rgba(10,10,10,0.4); letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .top-bars { color: rgba(10,10,10,0.3); letter-spacing: 2px; font-size: 10px; }
+
+  /* BLNK TITLE */
+  .blnk-title-wrap {
+    padding: 4px 14px 0; flex-shrink: 0;
+    transform: translateY(-40px); opacity: 0;
+    animation: blnkSlide 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+  }
+  @keyframes blnkSlide { to { transform: translateY(0); opacity: 1; } }
+  .blnk-title {
+    font-family: Arial Black, Arial, sans-serif;
+    font-size: clamp(80px, 26vw, 110px);
+    font-weight: 900; letter-spacing: -5px; line-height: 0.88;
+    color: var(--black); position: relative; display: inline-block;
+  }
+  .blnk-reg { font-size: 0.28em; vertical-align: super; font-weight: 900; letter-spacing: 0; }
+
+  /* ORANGE BAR */
+  .orange-bar {
+    width: 100%; height: 38px; background: var(--orange);
+    overflow: hidden; display: flex; align-items: center; flex-shrink: 0;
+    transform: translateX(-100%);
+    animation: orangeSlide 0.6s cubic-bezier(0.4,0,0.2,1) 0.5s forwards;
+  }
+  @keyframes orangeSlide { to { transform: translateX(0); } }
+  .marquee-track {
+    display: flex; align-items: center;
+    white-space: nowrap;
+    animation: marquee 12s linear infinite;
+  }
+  .marquee-content {
+    color: white; font-weight: 700; font-size: 11px; letter-spacing: 2px;
+    padding-right: 40px;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* BARCODE ROW */
+  .barcode-row {
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 4px 14px; flex-shrink: 0;
+    opacity: 0; animation: fadeIn 0.4s ease 0.9s forwards;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .barcode-mini { font-size: 8px; font-family: 'Courier New', monospace; color: rgba(10,10,10,0.4); letter-spacing: 3px; }
+
+  /* BLACK ZONE */
+  .black-zone {
+    width: 100%; flex: 0 0 42vh; background: var(--black);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden; flex-shrink: 0;
+    opacity: 0; animation: fadeIn 0.6s ease 0.7s forwards;
+  }
+
+  /* HOLO SHAPE */
+  .holo-wrap {
+    position: relative; width: 160px; height: 160px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .holo-shape {
+    width: 160px; height: 160px;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    background: linear-gradient(135deg, #ff0080, #ff8c00, #40e0d0, #8b00ff, #00ff7f, #ff0080);
+    background-size: 300% 300%;
+    animation:
+      holoRotate 12s linear infinite,
+      holoPulse 3s ease-in-out infinite alternate,
+      holoShift 4s ease infinite alternate;
+  }
+  @keyframes holoRotate {
+    from { transform: rotate(0deg) scale(1); }
+    to { transform: rotate(360deg) scale(1); }
+  }
+  @keyframes holoPulse {
+    from { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    to { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
+  }
+  /* Use separate animated element to avoid transform conflict */
+  .holo-outer {
+    animation: holoScale 3s ease-in-out infinite alternate;
+  }
+  @keyframes holoScale {
+    from { transform: scale(0.95); }
+    to { transform: scale(1.05); }
+  }
+  @keyframes holoShift {
+    from { background-position: 0% 50%; }
+    to { background-position: 100% 50%; }
+  }
+  .holo-glow {
+    position: absolute; inset: -20px;
+    background: radial-gradient(ellipse at center, rgba(255,120,0,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite alternate;
+  }
+  @keyframes glowPulse {
+    from { opacity: 0.5; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1.1); }
+  }
+  .black-corner {
+    position: absolute; font-size: 7px; font-family: 'Courier New', monospace;
+    color: rgba(255,255,255,0.2); letter-spacing: 1px;
+  }
+  .black-corner.tl { top: 10px; left: 12px; }
+  .black-corner.br { bottom: 10px; right: 12px; }
+
+  /* BOTTOM INFO */
+  .bottom-info {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    border-top: 0.5px solid rgba(10,10,10,0.2);
+    opacity: 0; animation: fadeIn 0.5s ease 1.1s forwards;
+    min-height: 0;
+  }
+  .info-cols { display: flex; flex: 1; overflow: hidden; }
+
+  /* GLOBE COLUMN */
+  .globe-col {
+    flex: 0 0 auto; padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+    border-right: 0.5px solid rgba(10,10,10,0.15);
+  }
+  .globe-frame {
+    border: 0.5px solid rgba(10,10,10,0.3);
+    padding: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* TEXT COLUMN */
+  .text-col {
+    flex: 1; padding: 12px 14px;
+    display: flex; flex-direction: column; justify-content: center; gap: 8px;
+  }
+  .text-col p {
+    font-size: 11px; color: rgba(10,10,10,0.7); line-height: 1.6;
+    font-family: Arial, sans-serif;
+  }
+  .text-col-meta {
+    font-size: 8px; font-family: 'Courier New', monospace;
+    color: rgba(10,10,10,0.35); letter-spacing: 1px; line-height: 1.7;
+  }
+  .bottom-blnk-label {
+    font-size: 9px; font-weight: 900; color: rgba(10,10,10,0.5);
+    letter-spacing: 3px; font-family: Arial Black, Arial, sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-icon">
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <circle cx="9" cy="9" r="7.5" fill="none" stroke="rgba(10,10,10,0.5)" stroke-width="1"/>
+        <path d="M9 4 L9 9 L13 9" fill="none" stroke="rgba(10,10,10,0.5)" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M5.5 5.5 L4 4" stroke="rgba(10,10,10,0.4)" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="top-right-text">
+      <span>Contact us / hello@blnkdigital.com</span>
+      <span class="top-bars">| | | |</span>
+    </div>
+  </div>
+
+  <!-- BLNK TITLE -->
+  <div class="blnk-title-wrap">
+    <span class="blnk-title">BLNK<span class="blnk-reg">®</span></span>
+  </div>
+
+  <!-- ORANGE BAR -->
+  <div class="orange-bar">
+    <div class="marquee-track">
+      <span class="marquee-content">◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆</span>
+      <span class="marquee-content">◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆ WEB3 THROUGH AR ✦ SHAPII ◆ AUGMENTED REALITY ✦ WEB3 / NFT ◆</span>
+    </div>
+  </div>
+
+  <!-- BARCODE ROW -->
+  <div class="barcode-row">
+    <span class="barcode-mini">+ | | | | | | | |</span>
+  </div>
+
+  <!-- BLACK ZONE -->
+  <div class="black-zone">
+    <div class="black-corner tl">SHAPII · AR ENGINE</div>
+    <div class="black-corner br">V.2.4.1 · NFT</div>
+    <div class="holo-outer">
+      <div class="holo-wrap">
+        <div class="holo-glow"></div>
+        <div class="holo-shape"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM INFO -->
+  <div class="bottom-info">
+    <div class="info-cols">
+      <div class="globe-col">
+        <div class="globe-frame">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(10,10,10,0.7)" stroke-width="0.7"/>
+            <ellipse cx="30" cy="30" rx="12" ry="26" fill="none" stroke="rgba(10,10,10,0.5)" stroke-width="0.7"/>
+            <ellipse cx="30" cy="30" rx="26" ry="8" fill="none" stroke="rgba(10,10,10,0.4)" stroke-width="0.5"/>
+            <line x1="4" y1="30" x2="56" y2="30" stroke="rgba(10,10,10,0.4)" stroke-width="0.5"/>
+            <line x1="7" y1="19" x2="53" y2="19" stroke="rgba(10,10,10,0.3)" stroke-width="0.4"/>
+            <line x1="7" y1="41" x2="53" y2="41" stroke="rgba(10,10,10,0.3)" stroke-width="0.4"/>
+            <line x1="30" y1="4" x2="30" y2="56" stroke="rgba(10,10,10,0.4)" stroke-width="0.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-col">
+        <div class="bottom-blnk-label">BLNK DIGITAL</div>
+        <p>BLNK is a creator led agency at the intersection of Augmented Reality and Web3.</p>
+        <div class="text-col-meta">
+          STUDIO · TBILISI 2024<br>
+          AR / WEB3 / NFT<br>
+          EST. MMXXII
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

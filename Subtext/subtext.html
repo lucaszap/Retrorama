@@ -267,15 +267,11 @@
       image-rendering: pixelated;
     }
 
-    /* Placeholder */
-    #visual-placeholder {
-      position: absolute; inset: 0; z-index: 2;
-      display: flex; align-items: center; justify-content: center;
-    }
-    #visual-placeholder .ph-label {
-      font-family: 'SF Mono', monospace;
-      font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
-      color: rgba(74,158,255,0.15);
+    /* Glitch overlay canvas */
+    #glitch-cv {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 2;
     }
 
     /* Corner brackets in visual zone */
@@ -315,9 +311,10 @@
     .msg {
       opacity: 0; transform: translateY(10px);
       transition: opacity 0.5s ease, transform 0.5s ease;
+      position: relative; z-index: 1;
     }
     .msg.in  { opacity: 1; transform: none; }
-    .msg.dim { opacity: 0.77; }
+    .msg.dim { opacity: 0.77; z-index: 0; }
 
     /* Narrator */
     .msg-narrator {
@@ -424,6 +421,21 @@
       text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
     }
 
+    /* Player reply */
+    .msg-player {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+    }
+    .player-bubble {
+      background: rgba(255,255,255,0.06);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.72);
+      border-radius: 20px;
+      padding: 13px 18px;
+      max-width: 280px;
+      font-size: 15px; line-height: 1.55;
+      text-align: center;
+    }
+
   </style>
 </head>
 <body>
@@ -470,6 +482,7 @@
   <!-- ══ GAME ══ -->
   <div id="game">
     <canvas id="bg"></canvas>
+    <canvas id="glitch-cv"></canvas>
 
     <!-- HUD bar -->
     <div id="hud-bar">
@@ -489,7 +502,6 @@
       <div class="v-corner bl"></div>
       <div class="v-corner br"></div>
       <span id="scene-label">// VISUEL</span>
-      <!-- Future: <img id="visual-img" src="..." alt=""> -->
       <div id="visual-placeholder">
         <span class="ph-label">Scène à venir</span>
       </div>
@@ -536,6 +548,7 @@
   let autoTimer   = null;
   let beatStarted = false;
   let inAutoPlay  = false;
+  let skipTyping  = false;
 
   const $dialogue = document.getElementById('dialogue');
   const $choices  = document.getElementById('choices');
@@ -644,6 +657,13 @@
         smartScroll();
         return;
       }
+      if (skipTyping) {
+        skipTyping = false;
+        for (let k = j; k < charSpans.length; k++) charSpans[k].style.opacity = '1';
+        cursor.remove();
+        smartScroll();
+        return;
+      }
       charSpans[j].style.opacity = '1';
       charSpans[j].insertAdjacentElement('afterend', cursor);
       if (j % 4 === 0) smartScroll();
@@ -675,42 +695,53 @@
     let msgEl, textEl;
 
     if (beat.type === 'narrator') {
-      msgEl = textEl = document.createElement('div');
-      msgEl.className = 'msg msg-narrator';
-      $dialogue.appendChild(msgEl);
-      beatStarted = true;
-      await tick();
-      if (gen !== myGen) return;
-      msgEl.classList.add('in');
-      smartScroll();
-
-    } else {
       msgEl = document.createElement('div');
-      msgEl.className = 'msg msg-lia';
-      if (introducedChars.has('lia')) {
-        const label = document.createElement('div');
-        label.className = 'lia-label'; label.textContent = 'LIA';
-        msgEl.appendChild(label);
-      }
-      textEl = document.createElement('div');
-      textEl.className = 'lia-bubble';
-      msgEl.appendChild(textEl);
-
-      msgEl.style.visibility = 'hidden';
-      textEl.innerHTML = boldNames(beat.text);
+      msgEl.className = 'msg msg-narrator';
+      msgEl.innerHTML = boldNames(beat.text);
       $dialogue.appendChild(msgEl);
       beatStarted = true;
       await tick();
       if (gen !== myGen) return;
-      const finalH = textEl.scrollHeight;
-      textEl.innerHTML = '';
-      textEl.style.minHeight = finalH + 'px';
-      msgEl.style.visibility = '';
       msgEl.classList.add('in');
       smartScroll();
+      await sleep(500);
+      if (gen !== myGen) return;
+      autoTimer = setTimeout(() => {
+        if (gen !== myGen) return;
+        inAutoPlay = false;
+        $choices.classList.remove('auto-play');
+        step++;
+        runStep();
+      }, 320);
+      return;
     }
 
-    await sleep(beat.type === 'lia' ? 160 : 130);
+    // lia
+    msgEl = document.createElement('div');
+    msgEl.className = 'msg msg-lia';
+    if (introducedChars.has('lia')) {
+      const label = document.createElement('div');
+      label.className = 'lia-label'; label.textContent = 'LIA';
+      msgEl.appendChild(label);
+    }
+    textEl = document.createElement('div');
+    textEl.className = 'lia-bubble';
+    msgEl.appendChild(textEl);
+
+    msgEl.style.visibility = 'hidden';
+    textEl.innerHTML = boldNames(beat.text);
+    $dialogue.appendChild(msgEl);
+    beatStarted = true;
+    await tick();
+    if (gen !== myGen) return;
+    const finalH = textEl.scrollHeight;
+    textEl.innerHTML = '';
+    textEl.style.minHeight = finalH + 'px';
+    msgEl.style.visibility = '';
+    msgEl.classList.add('in');
+    smartScroll();
+
+    await sleep(160);
     if (gen !== myGen) return;
 
     await typeText(textEl, beat.text, myGen, 22);
@@ -779,6 +810,21 @@
     $dialogue.scrollTop = $dialogue.scrollHeight;
   }
 
+  function addPlayerMessage(text) {
+    $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg msg-player';
+    const bubble = document.createElement('div');
+    bubble.className = 'player-bubble';
+    bubble.textContent = text;
+    msgEl.appendChild(bubble);
+    $dialogue.appendChild(msgEl);
+    requestAnimationFrame(() => {
+      msgEl.classList.add('in');
+      smartScroll();
+    });
+  }
+
   function showChoices(options) {
     inAutoPlay = false;
     $choices.classList.remove('auto-play');
@@ -792,8 +838,10 @@
       btn.textContent = opt.label;
       btn.style.animationDelay = (i * 0.07) + 's';
       btn.addEventListener('click', () => {
-        if (opt.reset) resetGame();
-        else { step = opt.next; runStep(); }
+        if (opt.reset) { resetGame(); return; }
+        $choices.innerHTML = '';
+        addPlayerMessage(opt.label);
+        setTimeout(() => { step = opt.next; runStep(); }, 350);
       });
       $choices.appendChild(btn);
     });
@@ -819,6 +867,10 @@
 
   $choices.addEventListener('click', (e) => {
     if (!e.target.classList.contains('choice-btn')) skipToChoice();
+  });
+
+  $dialogue.addEventListener('click', () => {
+    if (inAutoPlay) skipTyping = true;
   });
 
   // ── Background: nebula + drifting stars ──────────────────────
@@ -879,6 +931,179 @@
 
     window.addEventListener('load', () => { init(); requestAnimationFrame(draw); });
     window.addEventListener('resize', () => { resize(); nebulas = null; init(); });
+  })();
+
+  // ── Background glitch canvas ────────────────────────────────
+  (function () {
+    const cv = document.getElementById('glitch-cv');
+    const cx = cv.getContext('2d');
+    let W, H;
+
+    const CLR = { cyan: [0,210,255], mag: [255,30,110], amber: [255,175,30] };
+    function pick(...keys) { return CLR[keys[Math.floor(Math.random() * keys.length)]]; }
+
+    // ── Dot matrix (DedSec) — off-screen static canvas ──────
+    let dotCanvas = null;
+    function buildDots() {
+      dotCanvas = document.createElement('canvas');
+      dotCanvas.width = W; dotCanvas.height = H;
+      const dc = dotCanvas.getContext('2d');
+      dc.fillStyle = 'rgba(0,210,255,0.048)';
+      const sp = 28;
+      for (let x = sp / 2; x < W; x += sp)
+        for (let y = sp / 2; y < H; y += sp)
+          dc.fillRect(x, y, 1.5, 1.5);
+    }
+
+    function resize() {
+      W = cv.width  = window.innerWidth;
+      H = cv.height = window.innerHeight;
+      buildDots();
+    }
+
+    // ── Wireframe rectangles + brackets ─────────────────────
+    const rects = [];
+    function spawnRect() {
+      const w = 55 + Math.random() * 120, h = 40 + Math.random() * 80;
+      rects.push({
+        x: Math.random() * (W - w), y: Math.random() * (H - h), w, h,
+        color: pick('cyan', 'mag'),
+        life: 0, max: 80 + Math.floor(Math.random() * 100)
+      });
+    }
+
+    // ── Circuit traces ───────────────────────────────────────
+    const traces = [];
+    function spawnTrace() {
+      const color = pick('cyan', 'amber');
+      let x = Math.random() < 0.5 ? 0 : W;
+      let y = 40 + Math.random() * (H - 80);
+      const pts = [{ x, y }];
+      const n = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) {
+        if (i % 2 === 0) x = Math.max(10, Math.min(W - 10, x + (x < W / 2 ? 1 : -1) * (70 + Math.random() * 110)));
+        else             y = Math.max(10, Math.min(H - 10, y + (Math.random() < 0.5 ? 1 : -1) * (30 + Math.random() * 70)));
+        pts.push({ x, y });
+      }
+      let len = 0;
+      for (let i = 1; i < pts.length; i++)
+        len += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+      traces.push({ pts, color, len, life: 0, max: 100 + Math.floor(Math.random() * 70), alpha: 0.2 + Math.random() * 0.12 });
+    }
+
+    // ── Color blocks ─────────────────────────────────────────
+    const blocks = [];
+    function spawnBlock() {
+      const w = 30 + Math.random() * 90, h = 14 + Math.random() * 48;
+      blocks.push({
+        x: Math.random() * (W - w), y: Math.random() * (H - h), w, h,
+        color: pick('cyan', 'mag'),
+        life: 0, max: 10 + Math.floor(Math.random() * 14)
+      });
+    }
+
+    // ── Scan burst ───────────────────────────────────────────
+    let scanBurst = 0;
+
+    // ── Scheduler ────────────────────────────────────────────
+    let f = 0, nR = 90, nT = 50, nB = 65, nS = 200;
+    function schedule() {
+      f++;
+      if (f > nR) { spawnRect();  nR = f + 130 + Math.floor(Math.random() * 190); }
+      if (f > nT) { spawnTrace(); nT = f + 90  + Math.floor(Math.random() * 130); }
+      if (f > nB) { spawnBlock(); nB = f + 65  + Math.floor(Math.random() * 110); }
+    }
+
+    // ── Draw ─────────────────────────────────────────────────
+    function draw() {
+      schedule();
+      cx.clearRect(0, 0, W, H);
+
+      // 1. Dot matrix
+      if (dotCanvas) cx.drawImage(dotCanvas, 0, 0);
+
+      // 2. Persistent scan lines
+      cx.fillStyle = 'rgba(0,0,0,0.15)';
+      for (let y = 2; y < H; y += 4) cx.fillRect(0, y, W, 2);
+
+      // 3. Color blocks
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const b = blocks[i]; b.life++;
+        const t = b.life / b.max;
+        const a = 0.09 * (t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1);
+        cx.globalAlpha = a;
+        cx.fillStyle = `rgb(${b.color.join(',')})`;
+        cx.fillRect(b.x, b.y, b.w, b.h);
+        cx.globalAlpha = 1;
+        if (b.life >= b.max) blocks.splice(i, 1);
+      }
+
+      // 5. Wireframe rects + corner brackets
+      for (let i = rects.length - 1; i >= 0; i--) {
+        const r = rects[i]; r.life++;
+        const t  = r.life / r.max;
+        const fa = t < 0.12 ? t / 0.12 : t > 0.78 ? (1 - t) / 0.22 : 1;
+        cx.strokeStyle = `rgb(${r.color.join(',')})`;
+        cx.lineWidth   = 0.5;
+        cx.globalAlpha = fa * 0.22;
+        cx.strokeRect(r.x, r.y, r.w, r.h);
+        const bl = 9;
+        cx.lineWidth   = 1;
+        cx.globalAlpha = fa * 0.38;
+        for (const [bx, by, sx, sy] of [
+          [r.x,       r.y,        1,  1],
+          [r.x + r.w, r.y,       -1,  1],
+          [r.x,       r.y + r.h,  1, -1],
+          [r.x + r.w, r.y + r.h, -1, -1]
+        ]) {
+          cx.beginPath();
+          cx.moveTo(bx + sx * bl, by); cx.lineTo(bx, by); cx.lineTo(bx, by + sy * bl);
+          cx.stroke();
+        }
+        cx.globalAlpha = 1;
+        if (r.life >= r.max) rects.splice(i, 1);
+      }
+
+      // 6. Circuit traces with animated head
+      for (let i = traces.length - 1; i >= 0; i--) {
+        const tr = traces[i]; tr.life++;
+        const t  = tr.life / tr.max;
+        const fa = (t < 0.08 ? t / 0.08 : t > 0.82 ? (1 - t) / 0.18 : 1) * tr.alpha;
+        const drawLen = tr.len * Math.min(t / 0.55, 1);
+        cx.globalAlpha = fa;
+        cx.strokeStyle = `rgb(${tr.color.join(',')})`;
+        cx.lineWidth   = 0.8;
+        cx.beginPath();
+        let rem = drawLen, hx = tr.pts[0].x, hy = tr.pts[0].y;
+        cx.moveTo(hx, hy);
+        for (let j = 1; j < tr.pts.length; j++) {
+          if (rem <= 0) break;
+          const sl = Math.hypot(tr.pts[j].x - tr.pts[j-1].x, tr.pts[j].y - tr.pts[j-1].y);
+          if (rem >= sl) {
+            cx.lineTo(tr.pts[j].x, tr.pts[j].y);
+            hx = tr.pts[j].x; hy = tr.pts[j].y; rem -= sl;
+          } else {
+            const frac = rem / sl;
+            hx = tr.pts[j-1].x + (tr.pts[j].x - tr.pts[j-1].x) * frac;
+            hy = tr.pts[j-1].y + (tr.pts[j].y - tr.pts[j-1].y) * frac;
+            cx.lineTo(hx, hy); rem = 0;
+          }
+        }
+        cx.stroke();
+        if (t < 0.55) {
+          cx.globalAlpha = Math.min(fa * 2.2, 0.55);
+          cx.fillStyle   = `rgb(${tr.color.join(',')})`;
+          cx.fillRect(hx - 2, hy - 2, 4, 4);
+        }
+        cx.globalAlpha = 1;
+        if (tr.life >= tr.max) traces.splice(i, 1);
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('load', () => { resize(); requestAnimationFrame(draw); });
+    window.addEventListener('resize', resize);
   })();
 
   // ── Glitch helpers ───────────────────────────────────────────

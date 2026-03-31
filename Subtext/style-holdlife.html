@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HOLD LIFE — ESC</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0A0A0A}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.top-half{height:50%;position:relative;overflow:hidden;flex-shrink:0}
+.holo-bg{position:absolute;inset:0;background:linear-gradient(135deg,#FF006E,#8B00FF,#00B4D8,#06D6A0,#FFD60A,#FF006E);background-size:400% 400%;animation:holo 6s ease infinite}
+@keyframes holo{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.holo-scan{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,0.09)2px,rgba(0,0,0,0.09)3px);pointer-events:none}
+.rec{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.55);padding:4px 8px;display:flex;align-items:center;gap:5px;border-radius:2px;font-family:'Courier New',monospace;font-size:8px;color:#fff;letter-spacing:2px}
+.rec-dot{width:7px;height:7px;border-radius:50%;background:#FF1A1A;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.star-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.star-4{width:64px;height:64px;background:#fff;clip-path:polygon(50% 0%,55% 45%,100% 50%,55% 55%,50% 100%,45% 55%,0% 50%,45% 45%);box-shadow:0 0 30px rgba(255,255,255,0.9),0 0 60px rgba(255,255,255,0.4);animation:ss 8s linear infinite,sp 4s ease-in-out infinite}
+@keyframes ss{to{transform:rotate(360deg)}}
+@keyframes sp{0%,100%{transform:rotate(0deg) scale(0.9)}50%{transform:rotate(180deg) scale(1.12)}}
+.nav-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.nav-dots span{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.45)}
+.nav-dots span.on{background:#fff}
+.esc-tag{position:absolute;bottom:12px;right:12px;font-family:'Courier New',monospace;font-size:7px;color:rgba(255,255,255,0.7);letter-spacing:2px}
+.bot-half{height:50%;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;flex-direction:column;padding:14px 16px 10px}
+.bracket{position:absolute;top:10px;left:10px;width:12px;height:12px;border-top:1.5px solid #0A0A0A;border-left:1.5px solid #0A0A0A}
+.hold{font-size:clamp(68px,22vw,90px);font-weight:900;letter-spacing:-4px;color:#0A0A0A;line-height:0.85;opacity:0;animation:su .7s cubic-bezier(.34,1.56,.64,1) forwards}
+.hold.d{animation-delay:.13s}
+@keyframes su{from{transform:translateY(36px);opacity:0}to{transform:translateY(0);opacity:1}}
+.rule{height:.5px;background:#0A0A0A;margin:8px 0 6px}
+.desc{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1}
+.dc{font-family:'Courier New',monospace;font-size:7.5px;color:rgba(10,10,10,0.5);line-height:1.6}
+.botfoot{display:flex;justify-content:space-between;align-items:flex-end;padding-top:4px;border-top:.5px solid rgba(0,0,0,0.12)}
+.escl{font-family:'Courier New',monospace;font-size:8px;color:rgba(10,10,10,0.4);letter-spacing:3px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-half">
+    <div class="holo-bg"></div><div class="holo-scan"></div>
+    <div class="rec"><div class="rec-dot"></div>REC <span id="timer">00:00:00</span></div>
+    <div class="star-wrap"><div class="star-4"></div></div>
+    <div class="nav-dots"><span class="on"></span><span></span><span></span></div>
+    <div class="esc-tag">✦ ESC/7</div>
+  </div>
+  <div class="bot-half">
+    <div class="bracket"></div>
+    <div class="hold">HOLD</div>
+    <div class="hold d">LIFE</div>
+    <div class="rule"></div>
+    <div class="desc">
+      <div class="dc">HOLOPACK · 30 HOLOGRAPHIC TEXTURES · ESC CONSUMER DIVISION · EXTRACTED FROM LIFE EXPERIENCES. 30000×30000PX · QUALITY PER TEXTURE.</div>
+      <div class="dc">MANIPULATED TO GIVE BEAUTIFUL INTERACTIONS. ESC DIRECTIVE 7: CONSUME. COMPLY. HOLD LIFE. LA VIE N'EST QU'UN PRODUIT. © ESC 2026.</div>
+    </div>
+    <div class="botfoot">
+      <svg width="68" height="18" viewBox="0 0 68 18"><rect x="0" width="2" height="18" fill="#0A0A0A"/><rect x="4" width="1" height="18" fill="#0A0A0A"/><rect x="7" width="3" height="18" fill="#0A0A0A"/><rect x="12" width="1" height="18" fill="#0A0A0A"/><rect x="15" width="2" height="18" fill="#0A0A0A"/><rect x="20" width="1" height="18" fill="#0A0A0A"/><rect x="24" width="3" height="18" fill="#0A0A0A"/><rect x="30" width="1" height="18" fill="#0A0A0A"/><rect x="34" width="2" height="18" fill="#0A0A0A"/></svg>
+      <span class="escl">ESC® 2026</span>
+    </div>
+  </div>
+</div>
+<script>
+let s=0;setInterval(()=>{s++;const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sc=String(s%60).padStart(2,'0');document.getElementById('timer').textContent=h+':'+m+':'+sc},1000);
+</script>
+</body>
+</html>

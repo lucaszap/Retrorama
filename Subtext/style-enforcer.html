@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ENFORCER K-7 — ESC</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#08080A;font-family:-apple-system,'Arial Black',sans-serif;color:#fff}
+
+.page{position:fixed;inset:0;display:flex;flex-direction:column;padding:14px 16px calc(var(--safe-bottom,0px)+16px)}
+
+/* EYEBROW */
+.eyebrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.eyebrow span{font-family:'Courier New',monospace;font-size:8px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase}
+.badge-pill{border:1px solid #FFD000;border-radius:999px;padding:2px 8px;font-size:7px;letter-spacing:2px;color:#FFD000}
+
+/* SUBTITLE ROW */
+.subtitle-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.subtitle-row span{font-size:12px;font-weight:700;letter-spacing:4px;color:rgba(255,255,255,0.7);text-transform:uppercase}
+.arrow{color:#FFD000;font-size:16px}
+
+/* MAIN TITLE */
+.main-title{font-size:clamp(62px,20vw,82px);font-weight:900;letter-spacing:-3px;line-height:0.88;color:#fff;text-transform:uppercase;margin-bottom:2px}
+
+/* KATAKANA */
+.katakana{font-size:22px;letter-spacing:4px;color:#FFD000;margin-bottom:10px;font-weight:700}
+
+/* HALFTONE ZONE */
+.halftone-zone{flex:1;position:relative;overflow:hidden;border-radius:4px;min-height:0}
+
+.halftone-bg{position:absolute;inset:0;background:#0A0A0C}
+/* halftone dot pattern — denser at center */
+.halftone-dots{position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,208,0,0.55) 1px,transparent 1px);background-size:7px 7px;-webkit-mask-image:radial-gradient(ellipse 80% 90% at 50% 40%,black 20%,transparent 75%);mask-image:radial-gradient(ellipse 80% 90% at 50% 40%,black 20%,transparent 75%)}
+.halftone-scan{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.25) 3px,rgba(0,0,0,0.25) 4px)}
+
+/* Floating badges on image */
+.k7-badge{position:absolute;top:12px;left:12px;background:#FFD000;border-radius:999px;padding:4px 10px;font-size:8px;font-weight:900;letter-spacing:2px;color:#000;animation:float 3.5s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+.globe-icons{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px}
+.globe-icon svg{width:22px;height:22px;opacity:0.4}
+
+.data-block{position:absolute;bottom:10px;left:12px;font-family:'Courier New',monospace}
+.data-block .plus-data{font-size:7px;letter-spacing:2px;color:#00E5FF;margin-bottom:3px}
+.data-block p{font-size:7.5px;color:rgba(255,255,255,0.55);line-height:1.55;max-width:220px}
+
+/* Scattered stars */
+.star{position:absolute;color:rgba(255,255,255,0.35);font-size:10px;animation:blink-star var(--d,2s) step-end infinite}
+@keyframes blink-star{0%,100%{opacity:1}50%{opacity:0.1}}
+
+/* BOTTOM BAR */
+.bottom-bar{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:0.5px solid rgba(255,208,0,0.2);margin-top:8px}
+.bottom-bar span{font-family:'Courier New',monospace;font-size:7px;letter-spacing:2px;color:rgba(255,255,255,0.3)}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* Tally marks */
+.coords{font-size:6px;color:rgba(255,208,0,0.4);letter-spacing:1px;font-family:'Courier New',monospace}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="eyebrow">
+    <span>PERO NUNK — PØLICIA ·</span>
+    <div class="badge-pill">K-SA-K ®</div>
+  </div>
+
+  <div class="subtitle-row">
+    <span>MÁS DURX QUE</span>
+    <span class="arrow">→</span>
+  </div>
+
+  <div class="main-title">ENFORCER</div>
+  <div class="katakana">エンフォーサー K-7</div>
+
+  <div class="halftone-zone">
+    <div class="halftone-bg"></div>
+    <div class="halftone-dots"></div>
+    <div class="halftone-scan"></div>
+
+    <div class="k7-badge">K-7 · ESC UNIT</div>
+
+    <div class="globe-icons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="0.8">
+        <circle cx="12" cy="12" r="10"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="0.8">
+        <circle cx="12" cy="12" r="10"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="0.8">
+        <circle cx="12" cy="12" r="10"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+      </svg>
+    </div>
+
+    <div class="data-block">
+      <div class="plus-data">+ DATA</div>
+      <p>ENFORCER K-7 est une unité de contrôle ESC deployée en zone civile. Directive 4 : protéger l'ESC à tout prix. Autorisation force maximale.</p>
+    </div>
+
+    <!-- Scattered stars/crosses -->
+    <span class="star" style="top:20%;left:55%;--d:2.1s">+</span>
+    <span class="star" style="top:45%;left:75%;--d:1.7s">+</span>
+    <span class="star" style="top:70%;right:12%;--d:2.8s">✦</span>
+    <span class="star" style="top:15%;left:35%;--d:3.2s">·</span>
+
+    <!-- Coords overlay -->
+    <div class="coords" style="position:absolute;bottom:36px;right:12px">420<br>2K20</div>
+  </div>
+
+  <div class="bottom-bar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,208,0,0.5)" stroke-width="0.8">
+      <circle cx="12" cy="12" r="10"/>
+      <ellipse cx="12" cy="12" rx="10" ry="4"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="12" y1="2" x2="12" y2="22"/>
+    </svg>
+    <span>K-SA-K · ESC AUTHORIZED</span>
+    <span class="blink">■ UNIT ACTIVE</span>
+    <span>@escunit</span>
+  </div>
+</div>
+</body>
+</html>

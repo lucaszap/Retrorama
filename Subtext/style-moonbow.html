@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Moonbow — EREBUS Protocol</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#F5F0E4;color:#1A1A1A}
+.page{position:fixed;inset:0;display:flex;flex-direction:column;padding:16px 18px calc(env(safe-area-inset-bottom,0px)+16px)}
+
+/* TOP 3-COL INFO */
+.top-info{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;margin-bottom:14px;flex-shrink:0}
+.ti-left,.ti-right{font-family:Georgia,serif;font-size:8px;color:rgba(26,26,26,0.55);line-height:1.7}
+.ti-right{text-align:right}
+.ti-divider{width:.5px;background:rgba(26,26,26,0.2)}
+
+/* TITLE */
+.title-wrap{flex-shrink:0;margin-bottom:6px}
+.moonbow-title{font-family:Georgia,serif;font-size:clamp(46px,14vw,62px);font-weight:700;letter-spacing:-1.5px;color:#1A1A1A;line-height:1;border-bottom:1.5px solid #1A1A1A;padding-bottom:4px;display:inline-block}
+
+/* PRICE ROW */
+.price-row{display:flex;align-items:center;gap:0;margin-bottom:10px;flex-shrink:0}
+.price-rule{flex:1;height:.5px;background:#1A1A1A}
+.price-text{font-family:Georgia,serif;font-style:italic;font-size:9px;color:rgba(26,26,26,0.65);padding:0 10px;white-space:nowrap}
+
+/* COSMIC EYE ZONE */
+.eye-zone{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;min-height:0}
+
+.eye-row{position:relative;width:100%;display:flex;justify-content:center;margin:-4px 0}
+
+/* Each eye = 2 ellipses clipped to form almond */
+.eye{position:relative;overflow:hidden}
+
+.eye svg{display:block}
+
+/* FOOTER */
+.footer{flex-shrink:0;padding-top:8px;border-top:.5px solid rgba(26,26,26,0.2)}
+.footer-text{font-family:'Courier New',monospace;font-size:7px;color:rgba(26,26,26,0.3);letter-spacing:2px;text-align:center;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top-info">
+    <div class="ti-left">31.01.26<br>ODYXXEY<br>&amp; Bird<br>On The<br>Wire<br>Present</div>
+    <div class="ti-divider"></div>
+    <div class="ti-right">EREBUS-7<br>Birthdays</div>
+  </div>
+
+  <div class="title-wrap">
+    <div class="moonbow-title">Moonbow</div>
+  </div>
+
+  <div class="price-row">
+    <div class="price-rule"></div>
+    <div class="price-text">5 CR · w/ Acre Tarn &amp; MX World · 20.00</div>
+    <div class="price-rule"></div>
+  </div>
+
+  <!-- COSMIC EYES — SVG inline -->
+  <div class="eye-zone">
+    <svg width="100%" viewBox="0 0 320 310" xmlns="http://www.w3.org/2000/svg" style="max-height:100%;flex:1">
+      <defs>
+        <clipPath id="eye1"><ellipse cx="160" cy="50" rx="140" ry="44"/></clipPath>
+        <clipPath id="eye2"><ellipse cx="160" cy="160" rx="128" ry="42"/></clipPath>
+        <clipPath id="eye3"><ellipse cx="160" cy="262" rx="110" ry="38"/></clipPath>
+
+        <!-- Gradients for each eye -->
+        <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FF0040"/>
+          <stop offset="30%" stop-color="#FF6600"/>
+          <stop offset="60%" stop-color="#FFD600"/>
+          <stop offset="100%" stop-color="#FF0040"/>
+          <animateTransform attributeName="gradientTransform" type="rotate" from="0 0.5 0.5" to="360 0.5 0.5" dur="8s" repeatCount="indefinite"/>
+        </linearGradient>
+        <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00CC66"/>
+          <stop offset="40%" stop-color="#00EECC"/>
+          <stop offset="70%" stop-color="#00AAFF"/>
+          <stop offset="100%" stop-color="#00CC66"/>
+        </linearGradient>
+        <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#4400FF"/>
+          <stop offset="40%" stop-color="#8800EE"/>
+          <stop offset="70%" stop-color="#CC00AA"/>
+          <stop offset="100%" stop-color="#4400FF"/>
+        </linearGradient>
+      </defs>
+
+      <!-- EYE 1 (red/orange) -->
+      <g>
+        <!-- top half ellipse -->
+        <path d="M20,50 Q160,-10 300,50" fill="url(#g1)" clip-path="url(#eye1)"/>
+        <!-- bottom half ellipse -->
+        <path d="M20,50 Q160,110 300,50" fill="url(#g1)" clip-path="url(#eye1)" opacity="0.85"/>
+        <!-- full fill -->
+        <ellipse cx="160" cy="50" rx="140" ry="44" fill="url(#g1)" opacity="0.4"/>
+        <!-- Outline -->
+        <path d="M20,50 Q160,-10 300,50 Q160,110 20,50 Z" fill="none" stroke="#1A1A1A" stroke-width="1.2"/>
+        <!-- Moon circle -->
+        <circle cx="160" cy="50" r="28" fill="#F5F0E4"/>
+        <!-- Crescent (phase) -->
+        <circle cx="168" cy="54" r="22" fill="url(#g1)" opacity="0.6"/>
+      </g>
+
+      <!-- EYE 2 (green/cyan) — animated open -->
+      <g style="animation:eye-open 3s ease-in-out infinite alternate">
+        <ellipse cx="160" cy="160" rx="128" ry="42" fill="url(#g2)" opacity="0.85"/>
+        <path d="M32,160 Q160,100 288,160 Q160,220 32,160 Z" fill="none" stroke="#1A1A1A" stroke-width="1.2"/>
+        <circle cx="160" cy="160" r="24" fill="#F5F0E4"/>
+        <circle cx="166" cy="164" r="18" fill="url(#g2)" opacity="0.55"/>
+      </g>
+
+      <!-- EYE 3 (blue/violet) -->
+      <g>
+        <ellipse cx="160" cy="262" rx="110" ry="38" fill="url(#g3)" opacity="0.8"/>
+        <path d="M50,262 Q160,208 270,262 Q160,316 50,262 Z" fill="none" stroke="#1A1A1A" stroke-width="1.2"/>
+        <circle cx="160" cy="262" r="22" fill="#F5F0E4"/>
+        <circle cx="165" cy="266" r="16" fill="url(#g3)" opacity="0.5"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">MOONBOW PROTOCOL · ESC CLASSIFIED · PHASE 07 · EREBUS-7</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HILL TO DIE ON</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --acid: #CCFF00;
+    --black: #080808;
+  }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--acid);
+    color: var(--black);
+    font-family: 'Arial Black', 'Arial', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+  }
+
+  /* Top bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    z-index: 2;
+    margin-bottom: 8px;
+  }
+  .top-label {
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: var(--black);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .lost-cause {
+    border: 1.5px solid var(--black);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--black);
+    animation: pulse 3s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+
+  /* HILL */
+  .hill-word {
+    font-size: clamp(100px, 33vw, 138px);
+    font-weight: 900;
+    letter-spacing: -5px;
+    line-height: 0.82;
+    color: var(--black);
+    text-align: center;
+    z-index: 2;
+    margin-bottom: 2px;
+  }
+  .to-die-on {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    text-align: center;
+    color: var(--black);
+    z-index: 2;
+    margin-bottom: 10px;
+  }
+
+  /* Pills / infinity shape */
+  .shapes-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 2;
+    margin-bottom: 8px;
+  }
+  .plus-sep {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--black);
+  }
+
+  /* Integrity line */
+  .integrity-line {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: var(--black);
+    text-align: center;
+    z-index: 2;
+    opacity: 0.75;
+    margin-bottom: 10px;
+  }
+  .integrity-line .strike { text-decoration: line-through; }
+
+  /* Data zones */
+  .data-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    z-index: 2;
+    margin-bottom: auto;
+  }
+  .data-col { border-top: 1.5px solid var(--black); padding-top: 5px; }
+  .data-label {
+    font-family: 'Courier New', monospace;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--black);
+    margin-bottom: 3px;
+  }
+  .data-val {
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    color: var(--black);
+    opacity: 0.6;
+    line-height: 1.6;
+  }
+
+  /* Cross markers */
+  .cross {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--black);
+    pointer-events: none;
+    opacity: 0;
+    animation: cfade var(--dur, 2.5s) var(--del, 0s) step-end infinite;
+    z-index: 5;
+  }
+  @keyframes cfade { 15%, 22% { opacity: 0.55; } }
+
+  /* Bottom question */
+  .bottom-q {
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: var(--black);
+    opacity: 0.65;
+    text-align: center;
+    z-index: 2;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cross markers -->
+  <div class="cross" style="top:18%;left:8%;--dur:2.3s;--del:0s;">+</div>
+  <div class="cross" style="top:28%;right:9%;--dur:3.1s;--del:0.8s;">+</div>
+  <div class="cross" style="top:54%;left:5%;--dur:2.8s;--del:1.4s;">+</div>
+  <div class="cross" style="bottom:22%;right:7%;--dur:3.5s;--del:0.3s;">+</div>
+  <div class="cross" style="bottom:36%;left:48%;--dur:2.1s;--del:1.9s;">+</div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <span class="top-label">NO. 271 · 01025 · 22</span>
+    <span class="lost-cause">LOST CAUSE</span>
+    <span class="top-label">RE-VISIT HIP</span>
+  </div>
+
+  <!-- HILL -->
+  <div class="hill-word">HILL</div>
+  <div class="to-die-on">TO DIE ON</div>
+
+  <!-- Infinity/pill shapes -->
+  <div class="shapes-row">
+    <svg width="80" height="36" viewBox="0 0 80 36">
+      <rect x="2" y="2" width="76" height="32" rx="16" fill="#080808"/>
+      <rect x="18" y="8" width="44" height="20" rx="8" fill="#CCFF00"/>
+      <circle cx="20" cy="18" r="8" fill="#080808"/>
+    </svg>
+    <span class="plus-sep">+</span>
+    <svg width="80" height="36" viewBox="0 0 80 36">
+      <rect x="2" y="2" width="76" height="32" rx="16" fill="#080808"/>
+      <rect x="18" y="8" width="44" height="20" rx="8" fill="#CCFF00"/>
+      <circle cx="60" cy="18" r="8" fill="#080808"/>
+    </svg>
+  </div>
+
+  <!-- Integrity line -->
+  <div class="integrity-line">
+    (<span class="strike">INTEGRITY</span> // FIRM UNWAVERING BELIEF)
+  </div>
+
+  <!-- Data row -->
+  <div class="data-row">
+    <div class="data-col">
+      <div class="data-label">Stubborn</div>
+      <div class="data-val">
+        IDX: 0.94<br>
+        VAR: HIGH<br>
+        REF: —
+      </div>
+    </div>
+    <div class="data-col">
+      <div class="data-label">Principle</div>
+      <div class="data-val">
+        CLR: N/A<br>
+        POS: FIXED<br>
+        YLD: 0%
+      </div>
+    </div>
+    <div class="data-col">
+      <div class="data-label">Outcome</div>
+      <div class="data-val">
+        RSK: MAX<br>
+        RWD: TBD<br>
+        TTL: ∞
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom question -->
+  <div class="bottom-q">ARE YOU WILLING TO DIE ON THIS HILL?</div>
+</div>
+</body>
+</html>

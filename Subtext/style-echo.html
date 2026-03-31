@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LOCULUS — Carte Vaisseau</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#080A0E;color:#fff;font-family:'Courier New',monospace}
+.page{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* ── HEADER ── */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 16px 8px;border-bottom:0.5px solid rgba(0,229,255,0.2);flex-shrink:0}
+.ship-name{font-size:28px;font-weight:900;letter-spacing:3px;color:#00E5FF;line-height:1;font-family:'Arial Black',Arial,sans-serif}
+.ship-sub{font-size:6.5px;letter-spacing:2.5px;color:rgba(0,229,255,0.38);text-transform:uppercase;margin-top:3px}
+.motif-block{text-align:right}
+.motif-num{font-size:22px;font-weight:900;color:rgba(0,229,255,0.22);letter-spacing:0;line-height:1;font-family:'Arial Black',Arial,sans-serif}
+.motif-lbl{font-size:6px;letter-spacing:2px;color:rgba(0,229,255,0.25);text-transform:uppercase;margin-top:2px}
+
+/* ── STATUS BAR ── */
+.status{display:flex;justify-content:space-between;padding:5px 16px;background:rgba(0,229,255,0.03);border-bottom:0.5px solid rgba(0,229,255,0.1);flex-shrink:0}
+.st{font-size:6px;letter-spacing:1.5px;color:rgba(0,229,255,0.3);text-transform:uppercase}
+.st b{color:rgba(0,229,255,0.65);font-weight:normal}
+.blink{animation:blnk 1s step-end infinite}
+@keyframes blnk{50%{opacity:0}}
+
+/* ── MAP ZONE ── */
+.map-zone{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:0}
+
+/* Scan line overlay on map */
+.map-zone::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,229,255,0.02)3px,rgba(0,229,255,0.02)4px);pointer-events:none;z-index:1}
+
+.ship-svg{max-width:200px;max-height:100%;flex-shrink:0}
+
+/* SVG piece styles */
+.sec{cursor:pointer;transition:fill .18s,stroke .18s,filter .18s;-webkit-tap-highlight-color:transparent}
+.sec:hover{fill:rgba(0,229,255,0.18)!important;stroke:rgba(0,229,255,0.65)!important}
+.sec.on{fill:rgba(0,229,255,0.2)!important;stroke:#00E5FF!important;filter:drop-shadow(0 0 5px rgba(0,229,255,0.45))}
+.sec.here{fill:rgba(200,255,0,0.14)!important;stroke:rgba(200,255,0,0.7)!important}
+.sec.here.on{fill:rgba(200,255,0,0.22)!important;stroke:#C8FF00!important;filter:drop-shadow(0 0 8px rgba(200,255,0,0.5))}
+
+/* Section labels */
+.sn{font-family:'Courier New',monospace;pointer-events:none;text-anchor:middle;dominant-baseline:middle}
+.sn-num{font-size:8px;fill:rgba(0,229,255,0.35);letter-spacing:0}
+.sn-name{font-size:5.5px;fill:rgba(0,229,255,0.4);letter-spacing:1px;text-transform:uppercase}
+.sn-num.here{fill:rgba(200,255,0,0.7)}
+.sn-name.here{fill:rgba(200,255,0,0.55)}
+
+/* Player marker */
+@keyframes ppulse{0%,100%{r:3;opacity:0.9}50%{r:4.5;opacity:0.5}}
+.player-ring{fill:none;stroke:#C8FF00;stroke-width:1;animation:ppulse 2s ease-in-out infinite}
+
+/* ── INFO PANEL ── */
+.info{flex-shrink:0;border-top:0.5px solid rgba(0,229,255,0.15);background:rgba(0,0,0,0.35);padding:10px 16px 10px;display:flex;flex-direction:column;gap:6px}
+.info-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.info-name{font-size:clamp(13px,4.5vw,17px);font-weight:900;color:#00E5FF;letter-spacing:0.5px;line-height:1.1;flex:1;font-family:'Arial Black',Arial,sans-serif}
+.info-name.here{color:#C8FF00}
+.info-badges{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0}
+.ibadge{font-size:6px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border:0.5px solid;font-family:'Courier New',monospace}
+.ibadge.piece{color:rgba(0,229,255,0.4);border-color:rgba(0,229,255,0.2)}
+.ibadge.access{border-color:rgba(0,229,255,0.25);color:rgba(0,229,255,0.55)}
+.ibadge.here-badge{color:#C8FF00;border-color:rgba(200,255,0,0.4)}
+.info-desc{font-size:7.5px;color:rgba(255,255,255,0.38);line-height:1.65;letter-spacing:0.2px}
+.info-stats{display:flex;gap:14px}
+.is{display:flex;flex-direction:column;gap:1px}
+.is-k{font-size:5.5px;letter-spacing:1.5px;color:rgba(0,229,255,0.22);text-transform:uppercase}
+.is-v{font-size:10px;color:rgba(0,229,255,0.6);letter-spacing:0.3px}
+.is-v.here{color:rgba(200,255,0,0.65)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hdr">
+    <div>
+      <div class="ship-name">LOCULUS</div>
+      <div class="ship-sub">MODÈLE TANGRAM · 7 PIÈCES · 13 MOTIFS CONVEXES</div>
+    </div>
+    <div class="motif-block">
+      <div class="motif-num">IV<span style="font-size:11px">/XIII</span></div>
+      <div class="motif-lbl">MOTIF ACTUEL</div>
+    </div>
+  </div>
+
+  <div class="status">
+    <span class="st">SECTEUR <b>OMEGA-7</b></span>
+    <span class="st">VITESSE <b>847 km/s</b></span>
+    <span class="st">COQUE <b>98%</b></span>
+    <span class="st blink" style="color:rgba(200,255,0,0.5)">■ EN ROUTE</span>
+  </div>
+
+  <div class="map-zone">
+    <!--
+      7 pièces du Tangram disposées en vaisseau :
+      I   PONT            triangle (nez)
+      II  COCKPIT         trapèze  ← position joueur
+      III AILE BÂBORD     triangle (aile gauche)
+      IV  AILE TRIBORD    triangle (aile droite)
+      V   MODULE CENTRAL  hexagone (fuselage)
+      VI  RÉACTEUR        trapèze
+      VII PROPULSION      triangle (queue)
+
+      Coordonnées SVG viewBox 0 0 200 310 :
+      Toutes les pièces s'assemblent sans espaces ni chevauchements.
+    -->
+    <svg class="ship-svg" viewBox="0 0 200 310" id="shipSvg">
+      <defs>
+        <!-- Glow interne du vaisseau -->
+        <radialGradient id="hullglow" cx="50%" cy="45%" r="50%">
+          <stop offset="0%" stop-color="rgba(0,229,255,0.06)"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <!-- Glow section actuelle -->
+        <filter id="glow-here">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Fond interne du vaisseau -->
+      <polygon points="100,15 75,62 125,62 130,118 188,118 162,210 148,268 100,300 52,268 38,210 12,118 70,118 75,62"
+        fill="url(#hullglow)" stroke="none"/>
+
+      <!-- I — PONT DE COMMANDEMENT (nez, triangle) -->
+      <polygon id="sec-pont" class="sec"
+        points="100,15 75,62 125,62"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- II — COCKPIT (trapèze) — ici -->
+      <polygon id="sec-cockpit" class="sec here"
+        points="75,62 125,62 130,118 70,118"
+        fill="rgba(200,255,0,0.14)" stroke="rgba(200,255,0,0.7)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- III — AILE BÂBORD (triangle gauche) -->
+      <polygon id="sec-babord" class="sec"
+        points="75,62 12,118 70,118"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- IV — AILE TRIBORD (triangle droit) -->
+      <polygon id="sec-tribord" class="sec"
+        points="125,62 130,118 188,118"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- V — MODULE CENTRAL (hexagone, fuselage) -->
+      <polygon id="sec-module" class="sec"
+        points="12,118 70,118 130,118 188,118 162,210 38,210"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- VI — RÉACTEUR (trapèze) -->
+      <polygon id="sec-reacteur" class="sec"
+        points="38,210 162,210 148,268 52,268"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- VII — PROPULSION (triangle, queue) -->
+      <polygon id="sec-propulsion" class="sec"
+        points="52,268 148,268 100,300"
+        fill="rgba(0,229,255,0.06)" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-linejoin="round"/>
+
+      <!-- Lignes internes de séparation (subdiv visuelles) -->
+      <line x1="70" y1="118" x2="130" y2="118" stroke="rgba(0,229,255,0.12)" stroke-width="0.5"/>
+      <line x1="75" y1="62"  x2="70"  y2="118" stroke="rgba(0,229,255,0.12)" stroke-width="0.5"/>
+      <line x1="125" y1="62" x2="130" y2="118" stroke="rgba(0,229,255,0.12)" stroke-width="0.5"/>
+
+      <!-- Labels — numéros romains + noms -->
+      <!-- I PONT -->
+      <text x="100" y="40" class="sn sn-num">I</text>
+      <text x="100" y="52" class="sn sn-name">PONT</text>
+
+      <!-- II COCKPIT (ici) -->
+      <text x="100" y="82" class="sn sn-num here">II</text>
+      <text x="100" y="95" class="sn sn-name here">COCKPIT</text>
+      <text x="100" y="107" class="sn" style="font-size:5px;fill:rgba(200,255,0,0.4);text-anchor:middle;letter-spacing:1px">ICI</text>
+
+      <!-- III BÂBORD -->
+      <text x="46" y="100" class="sn sn-num">III</text>
+
+      <!-- IV TRIBORD -->
+      <text x="154" y="100" class="sn sn-num">IV</text>
+
+      <!-- V MODULE CENTRAL -->
+      <text x="100" y="152" class="sn sn-num">V</text>
+      <text x="100" y="164" class="sn sn-name">MODULE CENTRAL</text>
+
+      <!-- VI RÉACTEUR -->
+      <text x="100" y="232" class="sn sn-num">VI</text>
+      <text x="100" y="244" class="sn sn-name">RÉACTEUR</text>
+
+      <!-- VII PROPULSION -->
+      <text x="100" y="280" class="sn sn-num">VII</text>
+      <text x="100" y="291" class="sn sn-name">PROPULSION</text>
+
+      <!-- Marqueur position joueur -->
+      <circle cx="100" cy="88" r="3" fill="#C8FF00" opacity="0.9"/>
+      <circle cx="100" cy="88" class="player-ring" r="7"/>
+
+      <!-- Petits ticks aux coins des pièces (feeling blueprint) -->
+      <g stroke="rgba(0,229,255,0.25)" stroke-width="0.8" fill="none">
+        <path d="M100,15 l0,-3 m-3,3 l-3,0"/>
+        <path d="M52,268 l-2,2 m2,-2 l0,3"/>
+        <path d="M148,268 l2,2 m-2,-2 l0,3"/>
+        <path d="M12,118 l-3,0 m3,-2 l0,-3"/>
+        <path d="M188,118 l3,0 m-3,-2 l0,-3"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Panneau d'information section -->
+  <div class="info" id="infoPanel"></div>
+
+</div>
+
+<script>
+const SECTIONS = {
+  pont: {
+    num: 'I', name: 'PONT DE COMMANDEMENT',
+    shape: 'TRIANGLE', access: 'LIBRE',
+    here: false,
+    desc: 'Nez du vaisseau. Systèmes de navigation longue portée, capteurs ESC et veille orbitale. Accès par coursive centrale.',
+    stats: { PIÈCE: 'I/VII', FORME: 'TRIANGLE', INTÉG: '100%' },
+  },
+  cockpit: {
+    num: 'II', name: 'COCKPIT — PASSERELLE',
+    shape: 'TRAPÈZE', access: 'ICI',
+    here: true,
+    desc: 'Poste opérationnel principal. Contrôle de vol, communications et gestion des systèmes du Loculus. Position actuelle.',
+    stats: { PIÈCE: 'II/VII', FORME: 'TRAPÈZE', INTÉG: '98%' },
+  },
+  babord: {
+    num: 'III', name: 'AILE BÂBORD',
+    shape: 'TRIANGLE', access: 'LIBRE',
+    here: false,
+    desc: 'Aile gauche du Loculus. Airlock bâbord et module de jonction. Déplacer cette pièce déverrouille le dock d\'amarrage.',
+    stats: { PIÈCE: 'III/VII', FORME: 'TRIANGLE', INTÉG: '95%' },
+  },
+  tribord: {
+    num: 'IV', name: 'AILE TRIBORD',
+    shape: 'TRIANGLE', access: 'LIBRE',
+    here: false,
+    desc: 'Aile droite. Stockage sécurisé et matériel récupéré. Contient l\'inventaire saisi lors de la mission EREBUS-7.',
+    stats: { PIÈCE: 'IV/VII', FORME: 'TRIANGLE', INTÉG: '91%' },
+  },
+  module: {
+    num: 'V', name: 'MODULE CENTRAL',
+    shape: 'HEXAGONE', access: 'LIBRE',
+    here: false,
+    desc: 'Pièce maîtresse du Loculus. Quartiers de vie, réserves, infirmerie. Pivot autour duquel les autres sections se réorganisent.',
+    stats: { PIÈCE: 'V/VII', FORME: 'HEXAGONE', INTÉG: '100%' },
+  },
+  reacteur: {
+    num: 'VI', name: 'SALLE DES RÉACTEURS',
+    shape: 'TRAPÈZE', access: 'RESTR.',
+    here: false,
+    desc: 'Double réacteur à fusion contrôlée. Accès limité en phase de navigation. Température cœur : 4 200 K.',
+    stats: { PIÈCE: 'VI/VII', FORME: 'TRAPÈZE', INTÉG: '82%' },
+  },
+  propulsion: {
+    num: 'VII', name: 'NOYAU DE PROPULSION',
+    shape: 'TRIANGLE', access: 'SCELLÉ',
+    here: false,
+    desc: 'Queue du vaisseau. Moteur Loculus scellé par ordre ESC 7-Alpha. Accès biométrique requis. Aucun log disponible.',
+    stats: { PIÈCE: 'VII/VII', FORME: 'TRIANGLE', INTÉG: '76%' },
+  },
+};
+
+let selected = null;
+
+function renderInfo(id) {
+  const s = SECTIONS[id];
+  const c = s.here ? '#C8FF00' : '#00E5FF';
+  const cd = s.here ? 'rgba(200,255,0,0.5)' : 'rgba(0,229,255,0.45)';
+  document.getElementById('infoPanel').innerHTML = `
+    <div class="info-top">
+      <div class="info-name${s.here ? ' here' : ''}">${s.num} — ${s.name}</div>
+      <div class="info-badges">
+        <div class="ibadge piece">${s.shape}</div>
+        <div class="ibadge access" style="color:${cd};border-color:${cd}">${s.access}</div>
+        ${s.here ? '<div class="ibadge here-badge">POSITION</div>' : ''}
+      </div>
+    </div>
+    <div class="info-desc">${s.desc}</div>
+    <div class="info-stats">
+      ${Object.entries(s.stats).map(([k, v]) => `
+        <div class="is">
+          <span class="is-k">${k}</span>
+          <span class="is-v${s.here ? ' here' : ''}">${v}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function select(id) {
+  // Clear all
+  Object.keys(SECTIONS).forEach(k => {
+    const p = document.getElementById('sec-' + k);
+    if (p) p.classList.remove('on');
+  });
+  const poly = document.getElementById('sec-' + id);
+  if (poly) poly.classList.add('on');
+  selected = id;
+  renderInfo(id);
+}
+
+// Bind clicks
+Object.keys(SECTIONS).forEach(id => {
+  const el = document.getElementById('sec-' + id);
+  if (!el) return;
+  el.addEventListener('click', () => select(id));
+  el.addEventListener('touchstart', e => { e.preventDefault(); select(id); }, { passive: false });
+});
+
+// Default: show current location
+select('cockpit');
+</script>
+</body>
+</html>
