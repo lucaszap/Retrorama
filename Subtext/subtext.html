@@ -95,14 +95,13 @@
     .loader-body {
       display: flex; flex-direction: column; align-items: center; gap: 20px;
     }
-
     .loader-eyebrow {
       font-family: 'SF Mono', monospace;
       font-size: 9px; letter-spacing: 6px; text-transform: uppercase;
       color: rgba(74,158,255,0.4);
     }
 
-    /* ── Glitch wordmark ── */
+    /* Glitch wordmark */
     .loader-wordmark {
       font-size: 52px; font-weight: 700; letter-spacing: -3px;
       color: #ffffff;
@@ -114,24 +113,13 @@
       content: attr(data-text);
       position: absolute; top: 0; left: 0;
       font-size: inherit; font-weight: inherit; letter-spacing: inherit;
-      width: 100%; white-space: nowrap;
-      opacity: 0;
+      width: 100%; white-space: nowrap; opacity: 0;
     }
     .loader-wordmark::before { color: #ff2050; }
     .loader-wordmark::after  { color: #00e5ff; }
-
-    /* Glitch triggered class */
-    .loader-wordmark.glitching::before {
-      opacity: 1;
-      animation: glitch-r 0.22s steps(4) forwards;
-    }
-    .loader-wordmark.glitching::after {
-      opacity: 1;
-      animation: glitch-c 0.22s steps(4) forwards;
-    }
-    .loader-wordmark.glitching {
-      animation: glitch-base 0.22s steps(4) forwards;
-    }
+    .loader-wordmark.glitching::before { opacity: 1; animation: glitch-r 0.22s steps(4) forwards; }
+    .loader-wordmark.glitching::after  { opacity: 1; animation: glitch-c 0.22s steps(4) forwards; }
+    .loader-wordmark.glitching         { animation: glitch-base 0.22s steps(4) forwards; }
 
     @keyframes glitch-base {
       0%   { transform: translate(-2px, 0) skewX(1deg); }
@@ -160,7 +148,6 @@
       background: linear-gradient(to bottom, rgba(74,158,255,0.4), transparent);
       margin: -8px 0;
     }
-
     .progress-track {
       width: 180px; height: 1px;
       background: rgba(255,255,255,0.08);
@@ -192,7 +179,7 @@
     }
     #game.on { opacity: 1; pointer-events: all; }
 
-    /* Background canvas (stars + nebula) */
+    /* Background canvas */
     #bg {
       position: fixed; inset: 0;
       pointer-events: none; z-index: 0;
@@ -209,17 +196,9 @@
       pointer-events: none; z-index: 1;
     }
 
-    /* Top fade overlay — hides text scrolling under the header */
-    #top-fade {
-      position: fixed; top: 0; left: 0; right: 0;
-      height: calc(var(--safe-top) + 90px);
-      background: linear-gradient(to bottom, #050510 55%, transparent);
-      pointer-events: none; z-index: 15;
-    }
-
     /* ── HUD header ── */
     #hud-bar {
-      position: fixed; top: 0; left: 0; right: 0;
+      flex-shrink: 0;
       height: calc(44px + var(--safe-top));
       padding-top: var(--safe-top);
       display: flex; align-items: center; justify-content: space-between;
@@ -230,7 +209,7 @@
       border-bottom: 0.5px solid rgba(74,158,255,0.06);
       background: rgba(5,5,16,0.9);
       backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      z-index: 20;
+      z-index: 20; position: relative;
     }
 
     /* Back button */
@@ -249,11 +228,83 @@
     #back-btn:active { background: rgba(74,158,255,0.1); }
     #back-btn svg { width: 10px; height: 10px; }
 
+    /* ══ VISUAL ZONE ═════════════════════════════════════════════ */
+    #visual-zone {
+      flex-shrink: 0;
+      height: clamp(180px, 40%, 320px);
+      position: relative; z-index: 10;
+      overflow: hidden;
+      border-bottom: 0.5px solid rgba(74,158,255,0.08);
+    }
+
+    /* Scanline overlay */
+    #visual-zone::after {
+      content: '';
+      position: absolute; inset: 0; z-index: 5;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.12) 3px,
+        rgba(0,0,0,0.12) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* Bottom fade in visual zone */
+    #visual-zone::before {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+      background: linear-gradient(to bottom, transparent, #050510);
+      pointer-events: none; z-index: 6;
+    }
+
+    #visual-img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      position: relative; z-index: 2;
+      image-rendering: pixelated;
+    }
+
+    /* Placeholder */
+    #visual-placeholder {
+      position: absolute; inset: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #visual-placeholder .ph-label {
+      font-family: 'SF Mono', monospace;
+      font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(74,158,255,0.15);
+    }
+
+    /* Corner brackets in visual zone */
+    .v-corner {
+      position: absolute;
+      width: 14px; height: 14px;
+      border-color: rgba(74,158,255,0.2);
+      border-style: solid;
+      z-index: 7;
+    }
+    .v-corner.tl { top: 10px; left: 10px;  border-width: 1px 0 0 1px; }
+    .v-corner.tr { top: 10px; right: 10px; border-width: 1px 1px 0 0; }
+    .v-corner.bl { bottom: 10px; left: 10px;  border-width: 0 0 1px 1px; }
+    .v-corner.br { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
+
+    #scene-label {
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
+      font-family: 'SF Mono', monospace;
+      font-size: 8px; letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(74,158,255,0.2);
+      z-index: 7; white-space: nowrap;
+    }
+
     /* ══ DIALOGUE ════════════════════════════════════════════════ */
     #dialogue {
       flex: 1;
       overflow-y: auto;
-      padding: calc(var(--safe-top) + 56px) 24px 16px;
+      padding: 16px 24px 16px;
       display: flex; flex-direction: column; justify-content: flex-end; gap: 28px;
       position: relative; z-index: 10;
       scrollbar-width: none;
@@ -266,7 +317,7 @@
       transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .msg.in  { opacity: 1; transform: none; }
-    .msg.dim { opacity: 0.62; }
+    .msg.dim { opacity: 0.77; }
 
     /* Narrator */
     .msg-narrator {
@@ -324,7 +375,16 @@
       background: linear-gradient(to top, rgba(5,5,16,0.96) 55%, transparent);
     }
 
-    /* Pulsing dot during auto-play — subtle skip affordance */
+    /* Bottom fade extending into dialogue */
+    #choices::before {
+      content: '';
+      position: absolute;
+      top: -64px; left: 0; right: 0; height: 64px;
+      background: linear-gradient(to bottom, transparent, rgba(5,5,16,0.7));
+      pointer-events: none;
+    }
+
+    /* Pulsing dot during auto-play */
     #choices.auto-play { cursor: pointer; }
     #choices.auto-play::after {
       content: '';
@@ -410,8 +470,8 @@
   <!-- ══ GAME ══ -->
   <div id="game">
     <canvas id="bg"></canvas>
-    <div id="top-fade"></div>
 
+    <!-- HUD bar -->
     <div id="hud-bar">
       <button id="back-btn" onclick="navigateBack()">
         <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -422,7 +482,23 @@
       <span id="hud-r">SCN_001</span>
     </div>
 
+    <!-- Visual zone -->
+    <div id="visual-zone">
+      <div class="v-corner tl"></div>
+      <div class="v-corner tr"></div>
+      <div class="v-corner bl"></div>
+      <div class="v-corner br"></div>
+      <span id="scene-label">// VISUEL</span>
+      <!-- Future: <img id="visual-img" src="..." alt=""> -->
+      <div id="visual-placeholder">
+        <span class="ph-label">Scène à venir</span>
+      </div>
+    </div>
+
+    <!-- Dialogue zone -->
     <div id="dialogue"></div>
+
+    <!-- User zone -->
     <div id="choices"></div>
   </div>
 
@@ -431,7 +507,7 @@
   function navigateBack() {
     document.body.style.transition = 'opacity 0.35s ease';
     document.body.style.opacity = '0';
-    setTimeout(() => { window.location.href = '../Menu/index.html'; }, 350);
+    setTimeout(() => { window.location.href = './index.html'; }, 350);
   }
 
   // ── Story ────────────────────────────────────────────────────
@@ -464,47 +540,113 @@
   const $dialogue = document.getElementById('dialogue');
   const $choices  = document.getElementById('choices');
 
+  // ── Character tracking ───────────────────────────────────────
+  const CHARACTER_NAMES = ['Lia', 'Slayer'];
+  const introducedChars = new Set();
+
+  function checkIntroductions(text) {
+    for (const name of CHARACTER_NAMES) {
+      if (new RegExp('\\b' + name + '\\b', 'i').test(text)) {
+        introducedChars.add(name.toLowerCase());
+      }
+    }
+  }
+
+  function boldNames(text) {
+    let result = text;
+    for (const name of CHARACTER_NAMES) {
+      result = result.replace(new RegExp('\\b(' + name + ')\\b', 'g'), '<strong>$1</strong>');
+    }
+    return result;
+  }
+
+  function parseText(text) {
+    const result = [];
+    let pos = 0;
+    while (pos < text.length) {
+      let matched = false;
+      for (const name of CHARACTER_NAMES) {
+        const m = text.slice(pos).match(new RegExp('^' + name + '\\b', 'i'));
+        if (m) {
+          for (const ch of m[0]) result.push({ char: ch, bold: true });
+          pos += m[0].length;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        result.push({ char: text[pos], bold: false });
+        pos++;
+      }
+    }
+    return result;
+  }
+
+  function saveGame() {
+    localStorage.setItem('subtext_save', JSON.stringify({
+      step,
+      introducedChars: [...introducedChars]
+    }));
+  }
+
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   function tick()    { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
 
-  // Scroll only when the latest message gets within 80px of the choices zone
   function smartScroll() {
     const lastMsg = $dialogue.lastElementChild;
     if (!lastMsg) return;
     const refBottom  = lastMsg.getBoundingClientRect().bottom;
     const threshold  = $choices.getBoundingClientRect().top - 80;
-    if (refBottom > threshold) {
-      $dialogue.scrollTop += refBottom - threshold;
-    }
+    if (refBottom > threshold) $dialogue.scrollTop += refBottom - threshold;
   }
 
-  // Ghost-char typing: all chars are pre-rendered (invisible), then revealed one by one.
-  // The final layout is fixed from the start — no mid-word line-break glitch.
+  // Ghost-char typing: words in inline-block spans — no mid-word line breaks.
   async function typeText(el, text, myGen, speed = 22) {
-    // Pre-render all characters as invisible spans
-    const spans = Array.from(text).map(ch => {
-      const s = document.createElement('span');
-      s.textContent = ch;
-      s.style.opacity = '0';
-      return s;
-    });
-    spans.forEach(s => el.appendChild(s));
+    const parsedChars = parseText(text);
+    const charSpans = [];
+
+    let i = 0;
+    while (i < parsedChars.length) {
+      const c = parsedChars[i];
+      if (c.char === ' ') {
+        const s = document.createElement('span');
+        s.textContent = ' ';
+        s.style.opacity = '0';
+        el.appendChild(s);
+        charSpans.push(s);
+        i++;
+      } else {
+        const wordEl = document.createElement('span');
+        wordEl.style.cssText = 'display:inline-block;white-space:nowrap;';
+        while (i < parsedChars.length && parsedChars[i].char !== ' ') {
+          const wc = parsedChars[i];
+          const s = document.createElement('span');
+          s.textContent = wc.char;
+          s.style.opacity = '0';
+          if (wc.bold) s.style.fontWeight = '700';
+          wordEl.appendChild(s);
+          charSpans.push(s);
+          i++;
+        }
+        el.appendChild(wordEl);
+      }
+    }
 
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
-    el.insertBefore(cursor, spans[0] || null);
+    if (el.firstChild) el.insertBefore(cursor, el.firstChild);
+    else el.appendChild(cursor);
 
-    for (let i = 0; i < spans.length; i++) {
+    for (let j = 0; j < charSpans.length; j++) {
       if (gen !== myGen) {
-        // Abort: reveal all remaining instantly
-        for (let j = i; j < spans.length; j++) spans[j].style.opacity = '1';
+        for (let k = j; k < charSpans.length; k++) charSpans[k].style.opacity = '1';
         cursor.remove();
         smartScroll();
         return;
       }
-      spans[i].style.opacity = '1';
-      spans[i].insertAdjacentElement('afterend', cursor);
-      if (i % 4 === 0) smartScroll();
+      charSpans[j].style.opacity = '1';
+      charSpans[j].insertAdjacentElement('afterend', cursor);
+      if (j % 4 === 0) smartScroll();
       await sleep(speed + Math.random() * 8);
     }
 
@@ -524,10 +666,10 @@
       return;
     }
 
-    // Enable skip immediately (even before typing starts)
+    checkIntroductions(beat.text);
+
     inAutoPlay = true;
     $choices.classList.add('auto-play');
-
     $dialogue.querySelectorAll('.msg').forEach(m => m.classList.add('dim'));
 
     let msgEl, textEl;
@@ -543,24 +685,25 @@
       smartScroll();
 
     } else {
-      // Build Lia bubble
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-lia';
-      const label = document.createElement('div');
-      label.className = 'lia-label'; label.textContent = 'LIA';
+      if (introducedChars.has('lia')) {
+        const label = document.createElement('div');
+        label.className = 'lia-label'; label.textContent = 'LIA';
+        msgEl.appendChild(label);
+      }
       textEl = document.createElement('div');
       textEl.className = 'lia-bubble';
-      msgEl.appendChild(label); msgEl.appendChild(textEl);
+      msgEl.appendChild(textEl);
 
-      // Pre-measure final height so bubble never clips or jumps
       msgEl.style.visibility = 'hidden';
-      textEl.textContent = beat.text;
+      textEl.innerHTML = boldNames(beat.text);
       $dialogue.appendChild(msgEl);
       beatStarted = true;
       await tick();
       if (gen !== myGen) return;
       const finalH = textEl.scrollHeight;
-      textEl.textContent = '';
+      textEl.innerHTML = '';
       textEl.style.minHeight = finalH + 'px';
       msgEl.style.visibility = '';
       msgEl.classList.add('in');
@@ -573,7 +716,6 @@
     await typeText(textEl, beat.text, myGen, 22);
     if (gen !== myGen) return;
 
-    // Brief breath, then auto-advance
     autoTimer = setTimeout(() => {
       if (gen !== myGen) return;
       inAutoPlay = false;
@@ -583,7 +725,6 @@
     }, 320);
   }
 
-  // Skip remaining non-choice beats, jump straight to next choice
   function skipToChoice() {
     if (!inAutoPlay && !beatStarted) return;
     gen++;
@@ -592,7 +733,6 @@
     $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
 
-    // Disable transitions for instant snap (no animated opacity flicker)
     $dialogue.querySelectorAll('.msg').forEach(m => {
       m.style.transition = 'none';
       m.classList.add('dim');
@@ -605,29 +745,35 @@
     }
     step = s;
 
-    // Re-enable transitions after one frame
     requestAnimationFrame(() => {
+      const msgs = $dialogue.querySelectorAll('.msg');
+      if (msgs.length) msgs[msgs.length - 1].classList.remove('dim');
       $dialogue.querySelectorAll('.msg').forEach(m => { m.style.transition = ''; });
       if (step < STORY.length) runStep();
     });
   }
 
   function renderInstant(beat) {
+    checkIntroductions(beat.text);
     let msgEl;
     if (beat.type === 'narrator') {
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-narrator in dim';
       msgEl.style.transition = 'none';
-      msgEl.textContent = beat.text;
+      msgEl.innerHTML = boldNames(beat.text);
     } else {
       msgEl = document.createElement('div');
       msgEl.className = 'msg msg-lia in dim';
       msgEl.style.transition = 'none';
-      const label = document.createElement('div');
-      label.className = 'lia-label'; label.textContent = 'LIA';
+      if (introducedChars.has('lia')) {
+        const label = document.createElement('div');
+        label.className = 'lia-label'; label.textContent = 'LIA';
+        msgEl.appendChild(label);
+      }
       const bubble = document.createElement('div');
-      bubble.className = 'lia-bubble'; bubble.textContent = beat.text;
-      msgEl.appendChild(label); msgEl.appendChild(bubble);
+      bubble.className = 'lia-bubble';
+      bubble.innerHTML = boldNames(beat.text);
+      msgEl.appendChild(bubble);
     }
     $dialogue.appendChild(msgEl);
     $dialogue.scrollTop = $dialogue.scrollHeight;
@@ -637,6 +783,9 @@
     inAutoPlay = false;
     $choices.classList.remove('auto-play');
     $choices.innerHTML = '';
+    const msgs = $dialogue.querySelectorAll('.msg');
+    if (msgs.length) msgs[msgs.length - 1].classList.remove('dim');
+    saveGame();
     options.forEach((opt, i) => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn' + (opt.reset ? ' reset' : '');
@@ -661,12 +810,13 @@
     inAutoPlay = false;
     $choices.classList.remove('auto-play');
     step = 0;
+    introducedChars.clear();
+    localStorage.removeItem('subtext_save');
     $dialogue.innerHTML = '';
     $choices.innerHTML = '';
     runStep();
   }
 
-  // Tap anywhere in choices zone during auto-play → skip to next choice
   $choices.addEventListener('click', (e) => {
     if (!e.target.classList.contains('choice-btn')) skipToChoice();
   });
@@ -684,16 +834,12 @@
 
     function init() {
       resize();
-
-      // Nebula blobs: large, blurred, very low opacity, slow drift
       nebulas = [
         { bx: W*0.18, by: H*0.3,  r: 300, rgb:'55,90,210',  a:0.032, sx:0.00025, sy:0.00018 },
         { bx: W*0.78, by: H*0.65, r: 260, rgb:'90,45,185',  a:0.022, sx:0.00018, sy:0.00030 },
         { bx: W*0.50, by: H*0.08, r: 220, rgb:'0,140,150',  a:0.020, sx:0.00032, sy:0.00022 },
         { bx: W*0.85, by: H*0.2,  r: 180, rgb:'40,80,180',  a:0.015, sx:0.00020, sy:0.00015 }
       ];
-
-      // Stars with very slow drift (cosy space-travel feel)
       stars = Array.from({ length: 90 }, () => ({
         x: Math.random() * W, y: Math.random() * H,
         vx: (Math.random() - 0.5) * 0.06,
@@ -707,8 +853,6 @@
 
     function draw(t) {
       cx.clearRect(0, 0, W, H);
-
-      // Nebulas
       for (const n of nebulas) {
         const ox = n.bx + Math.sin(t * n.sx) * 70;
         const oy = n.by + Math.cos(t * n.sy) * 50;
@@ -721,8 +865,6 @@
         cx.ellipse(ox, oy, n.r, n.r * 0.75, 0, 0, Math.PI * 2);
         cx.fill();
       }
-
-      // Stars
       for (const s of stars) {
         s.x += s.vx; s.y -= s.vy;
         if (s.y < -2) { s.y = H + 2; s.x = Math.random() * W; }
@@ -732,7 +874,6 @@
         cx.fillStyle = `rgba(200,220,255,${a})`;
         cx.fillRect(s.x, s.y, s.r, s.r);
       }
-
       requestAnimationFrame(draw);
     }
 
@@ -746,11 +887,8 @@
   const loader     = document.getElementById('loader');
 
   function flashGlitch() {
-    // Chromatic aberration on wordmark
     wordmark.classList.add('glitching');
     setTimeout(() => wordmark.classList.remove('glitching'), 260);
-
-    // Random horizontal bar
     const barY = Math.random() * 80 + 10;
     glitchBar.style.top = barY + '%';
     glitchBar.style.opacity = '1';
@@ -758,15 +896,12 @@
     glitchBar.style.transformOrigin = Math.random() > 0.5 ? 'left' : 'right';
     setTimeout(() => {
       glitchBar.style.opacity = '0';
-      // Quick second flash
       setTimeout(() => {
         glitchBar.style.top = (Math.random() * 60 + 20) + '%';
         glitchBar.style.opacity = '0.5';
         setTimeout(() => { glitchBar.style.opacity = '0'; }, 40);
       }, 60);
     }, 50);
-
-    // Brief loader brightness flash
     loader.style.filter = 'brightness(1.4)';
     setTimeout(() => { loader.style.filter = ''; }, 80);
   }
@@ -804,17 +939,38 @@
       bar.style.width = progress + '%';
     }, 75);
 
-    // 3 random glitches during loading
     [700, 1550, 2700].forEach(t => setTimeout(flashGlitch, t));
 
-    // Big final glitch then reveal
     setTimeout(() => {
       flashGlitch();
       setTimeout(flashGlitch, 120);
       setTimeout(() => {
         loader.classList.add('fade-out');
         document.getElementById('game').classList.add('on');
-        setTimeout(() => { loader.style.display = 'none'; runStep(); }, 900);
+        setTimeout(() => {
+          loader.style.display = 'none';
+          const mode = new URLSearchParams(window.location.search).get('mode');
+          if (mode === 'new') {
+            localStorage.removeItem('subtext_save');
+            runStep();
+          } else {
+            const saved = localStorage.getItem('subtext_save');
+            if (saved) {
+              try {
+                const sv = JSON.parse(saved);
+                step = sv.step || 0;
+                (sv.introducedChars || []).forEach(c => introducedChars.add(c));
+                for (let s = 0; s < step; s++) {
+                  if (STORY[s].type !== 'choice') renderInstant(STORY[s]);
+                }
+                const ms = $dialogue.querySelectorAll('.msg');
+                if (ms.length) ms[ms.length - 1].classList.remove('dim');
+                $dialogue.scrollTop = $dialogue.scrollHeight;
+              } catch(e) { step = 0; }
+            }
+            runStep();
+          }
+        }, 900);
       }, 200);
     }, 3500);
   })();

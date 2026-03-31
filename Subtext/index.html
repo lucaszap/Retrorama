@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050510">
+  <title>Subtext</title>
+  <style>
+    :root {
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #050510;
+      overflow: hidden;
+      font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Background canvas */
+    #bg-canvas {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Faint grid */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background-image:
+        linear-gradient(rgba(74,158,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,158,255,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+
+    /* Menu layout */
+    #menu {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+      padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px);
+      z-index: 10;
+    }
+
+    /* Title */
+    #title-block {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    #eyebrow {
+      font-family: 'SF Mono', monospace;
+      font-size: 9px; letter-spacing: 5px; text-transform: uppercase;
+      color: rgba(74,158,255,0.35);
+    }
+    #wordmark {
+      font-size: 42px; font-weight: 700; letter-spacing: -2px;
+      color: #ffffff;
+      text-shadow: 0 0 50px rgba(74,158,255,0.2);
+    }
+    #title-rule {
+      width: 1px; height: 28px;
+      background: linear-gradient(to bottom, rgba(74,158,255,0.35), transparent);
+    }
+
+    /* Cards */
+    .menu-card {
+      width: 100%; max-width: 340px;
+      background: rgba(255,255,255,0.03);
+      border: 0.5px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 22px 20px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 16px;
+      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      position: relative; overflow: hidden;
+    }
+    .menu-card::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit;
+      opacity: 0; transition: opacity 0.15s;
+      background: radial-gradient(circle at 30% 50%, rgba(74,158,255,0.1), transparent 70%);
+    }
+    .menu-card:active { transform: scale(0.97); background: rgba(255,255,255,0.06); }
+    .menu-card:active::after { opacity: 1; }
+    .menu-card.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+
+    .card-icon {
+      width: 52px; height: 52px; border-radius: 13px; flex-shrink: 0;
+      background: linear-gradient(145deg, #080a1a, #0a1030);
+      border: 0.5px solid rgba(74,158,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'SF Mono', monospace;
+      font-size: 22px; font-weight: 700; color: #4a9eff;
+    }
+
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 17px; font-weight: 600;
+      color: #f5f5f7; letter-spacing: -0.2px;
+      margin-bottom: 3px;
+    }
+    .card-desc {
+      font-size: 12px; color: rgba(255,255,255,0.35); line-height: 1.4;
+    }
+    .card-arrow { font-size: 18px; color: rgba(255,255,255,0.2); flex-shrink: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="menu">
+    <div id="title-block">
+      <div id="eyebrow">Système narratif</div>
+      <div id="wordmark">SUBTEXT</div>
+      <div id="title-rule"></div>
+    </div>
+
+    <div class="menu-card" id="card-new">
+      <div class="card-icon">▶</div>
+      <div class="card-info">
+        <div class="card-name">Nouvelle partie</div>
+        <div class="card-desc">Recommencer depuis le début</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="menu-card" id="card-load">
+      <div class="card-icon">◈</div>
+      <div class="card-info">
+        <div class="card-name">Charger la partie</div>
+        <div class="card-desc" id="save-hint">Aucune sauvegarde</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+  </div>
+
+  <script>
+  function navigateTo(url) {
+    document.body.style.transition = 'opacity 0.35s ease';
+    document.body.style.opacity = '0';
+    setTimeout(() => { window.location.href = url; }, 350);
+  }
+
+  // Check save
+  const saved = localStorage.getItem('subtext_save');
+  const cardLoad = document.getElementById('card-load');
+  const saveHint = document.getElementById('save-hint');
+
+  if (saved) {
+    try {
+      const sv = JSON.parse(saved);
+      const pct = Math.round((sv.step / 8) * 100);
+      saveHint.textContent = 'Scène ' + sv.step + ' — ' + pct + '% parcouru';
+    } catch(e) {
+      saveHint.textContent = 'Partie en cours';
+    }
+  } else {
+    cardLoad.classList.add('disabled');
+  }
+
+  document.getElementById('card-new').addEventListener('click', () => navigateTo('./subtext.html?mode=new'));
+  cardLoad.addEventListener('click', () => navigateTo('./subtext.html'));
+
+  // Stars background
+  (function() {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, stars = [];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
+    class Star {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.r = Math.random() * 1.2 + 0.2;
+        this.a = Math.random() * 0.5 + 0.1;
+        this.speed = Math.random() * 0.003 + 0.001;
+        this.phase = Math.random() * Math.PI * 2;
+      }
+      draw(t) {
+        const alpha = this.a * (0.6 + 0.4 * Math.sin(t * this.speed * 1000 + this.phase));
+        ctx.fillStyle = `rgba(200,220,255,${alpha})`;
+        ctx.fillRect(this.x - this.r/2, this.y - this.r/2, this.r, this.r);
+      }
+    }
+
+    function init() { resize(); stars = Array.from({length: 120}, () => new Star()); }
+    function animate(t) { ctx.clearRect(0, 0, W, H); for (const s of stars) s.draw(t); requestAnimationFrame(animate); }
+
+    window.addEventListener('load', () => { init(); requestAnimationFrame(animate); });
+    window.addEventListener('resize', resize);
+  })();
+  </script>
+</body>
+</html>
