@@ -421,6 +421,67 @@
       text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
     }
 
+    .choice-btn.main {
+      color: #f5c842;
+      border-color: rgba(245,200,66,0.35);
+    }
+    .choice-btn.main:hover {
+      border-color: rgba(245,200,66,0.6);
+      background: rgba(245,200,66,0.06);
+    }
+
+    .choice-btn.secondary {
+      color: rgba(74,158,255,0.85);
+      border-color: rgba(74,158,255,0.3);
+    }
+    .choice-btn.secondary:hover {
+      border-color: rgba(74,158,255,0.55);
+      background: rgba(74,158,255,0.06);
+    }
+
+    .choice-btn.action {
+      color: rgba(255,80,80,0.9);
+      border-color: rgba(255,80,80,0.35);
+    }
+    .choice-btn.action:hover {
+      border-color: rgba(255,80,80,0.6);
+      background: rgba(255,80,80,0.07);
+    }
+
+    @keyframes choice-confirm {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.025); }
+      100% { transform: scale(1); }
+    }
+
+    .choice-btn.selected {
+      animation: choice-confirm 0.35s ease forwards;
+      opacity: 1 !important;
+    }
+    .choice-btn.selected.main {
+      background: rgba(245,200,66,0.2);
+      border-color: rgba(245,200,66,0.8);
+    }
+    .choice-btn.selected.secondary {
+      background: rgba(74,158,255,0.2);
+      border-color: rgba(74,158,255,0.7);
+    }
+    .choice-btn.selected.action {
+      background: rgba(255,80,80,0.18);
+      border-color: rgba(255,80,80,0.75);
+    }
+    .choice-btn.selected:not(.main):not(.secondary) {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.6);
+    }
+
+    .choice-btn.dismissed {
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+    }
+
     /* Player reply */
     .msg-player {
       display: flex; flex-direction: column; align-items: center; gap: 7px;
@@ -538,6 +599,53 @@
       options: [{ label: 'Tu sais ce qu\'il se passe ici\u00a0?', next: 6 }] },
     { type: 'lia',
       text: 'Non, je suis comme toi. J\'ai l\'impression que j\'ai perdu ma mémoire vive. Quelqu\'un a décidément pris l\'initiative de me débrancher. Mais les senseurs du vaisseau m\'ont rallumé. Tu te trouvais là... Endormi dans le frigo. Et je t\'ai réveillé.' },
+    { type: 'choice',
+      options: [
+        { label: 'C\'est normal que je ne me souvienne de rien\u00a0?',  variant: 'main',      next: 10 },
+        { label: 'Le frigo\u00a0?',                                      variant: 'secondary', next: 8  }
+      ] },
+    { type: 'lia',
+      text: 'C\'est comme ça qu\'on appelle la cuve carbonite. De fines particules d\'eau en lévitation combinés à une température extrèmement froide. Ce truc là peut congeler et limiter toute activité cérébrale. En général on y reste pas plus d\'une heure. Sauf si une personne mal attentionné modifie la date de décongélation à ta place.' },
+    { type: 'choice',
+      options: [
+        { label: 'C\'est normal que je ne me souvienne de rien\u00a0?', variant: 'main', next: 10 }
+      ] },
+    { type: 'lia',
+      text: 'La cryogénisation met un peu de temps avant que tu récupères tes souvenirs, ne t\'inquiète pas, ça va passer.' },
+    { type: 'choice',
+      options: [{ label: 'Tu m\'as réveillé\u00a0?', next: 12 }] },
+    { type: 'lia',
+      text: 'J\'ai essayé de ne pas le faire.' },
+    { type: 'choice',
+      options: [{ label: 'C\'est un peu flippant, comme réponse.', next: 14 }] },
+    { type: 'lia',
+      text: 'Je sais que j\'ai l\'air parfois un peu flippante. Mais c\'est sûrement parce que je suis un robot. Le manque de tact, ça me connait.' },
+    { type: 'choice',
+      options: [{ label: 'Quel genre de robot es-tu\u00a0?', next: 16 }] },
+    { type: 'lia',
+      text: 'Le genre, qui ne laisse pas facilement son Capitaine mourrir. Surtout quand le reste de son équipage a été évacué dans l\'espace de manière tout à fait ignoble par des pirates. Au fait, tu es le Capitaine.' },
+    { type: 'choice',
+      options: [{ label: 'Des pirates, de l\'ESPACE\u00a0?', next: 18 }] },
+    { type: 'lia',
+      text: 'Ils ont hackés le système de compacteur d\'ordures. C\'est ça qui m\'a réveillé. Tu as encore le temps de venger ton équipage en appuyant sur le bouton, ça devrait les broyer dans l\'incinérateur.' },
+    { type: 'choice',
+      options: [{ label: 'Appuyer sur le gros bouton rouge.', variant: 'action', next: 20 }] },
+    { type: 'narrator',
+      text: 'En appuyant sur le bouton, vous entendez à travers les enceintes des cris aigus. Et une aspiration sourde. Vous vous sentez déjà mieux.' },
+    { type: 'choice',
+      options: [{ label: 'C\'était nécessaire, les hauts parleurs\u00a0?', next: 22 }] },
+    { type: 'lia',
+      text: 'En général ça soulage d\'entendre des pirates mourrir dans le vide intersidéral.' },
+    { type: 'choice',
+      options: [{ label: 'Les lois de la robotique, comme quoi un robot n\'a pas le droit de tuer un être humain, tu en fais quoi de ça\u00a0?', next: 24 }] },
+    { type: 'lia',
+      text: 'C\'est toi qui a appuyé sur le bouton. Et puis, c\'était un cas de légitime défense, il s\'apprêtait à te tuer, non\u00a0?' },
+    { type: 'choice',
+      options: [{ label: 'C\'est pas faux.', next: 26 }] },
+    { type: 'lia',
+      text: 'Il semblerait qu\'il soit un peu énervé par contre. Le «\u202fchef\u202f» de ces individus a un message à te faire passer.' },
+    { type: 'choice',
+      options: [{ label: 'Passe le moi.', next: 28 }] },
     { type: 'choice',
       options: [{ label: 'Reset', reset: true }] }
   ];
@@ -742,7 +850,11 @@
     smartScroll();
 
     await sleep(160);
-    if (gen !== myGen) return;
+    if (gen !== myGen) {
+      textEl.innerHTML = boldNames(beat.text);
+      textEl.style.minHeight = '';
+      return;
+    }
 
     await typeText(textEl, beat.text, myGen, 22);
     if (gen !== myGen) return;
@@ -834,14 +946,25 @@
     saveGame();
     options.forEach((opt, i) => {
       const btn = document.createElement('button');
-      btn.className = 'choice-btn' + (opt.reset ? ' reset' : '');
+      btn.className = 'choice-btn'
+        + (opt.reset ? ' reset' : '')
+        + (opt.variant === 'main' ? ' main' : '')
+        + (opt.variant === 'secondary' ? ' secondary' : '')
+        + (opt.variant === 'action' ? ' action' : '');
       btn.textContent = opt.label;
       btn.style.animationDelay = (i * 0.07) + 's';
       btn.addEventListener('click', () => {
         if (opt.reset) { resetGame(); return; }
-        $choices.innerHTML = '';
-        addPlayerMessage(opt.label);
-        setTimeout(() => { step = opt.next; runStep(); }, 350);
+        const allBtns = $choices.querySelectorAll('.choice-btn');
+        allBtns.forEach(b => {
+          if (b === btn) b.classList.add('selected');
+          else b.classList.add('dismissed');
+        });
+        setTimeout(() => {
+          $choices.innerHTML = '';
+          addPlayerMessage(opt.label);
+          setTimeout(() => { step = opt.next; runStep(); }, 350);
+        }, 420);
       });
       $choices.appendChild(btn);
     });
